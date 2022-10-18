@@ -4,11 +4,10 @@ import datetime
 
 ODX = 400
 
+logging.basicConfig(level=logging.INFO)
 
 
-logging.basicConfig(level=logging.DEBUG)
-
-
+#with open('HB9XC_432.edi', 'r') as ediFile:
 with open('HB9XC_1240.edi', 'r') as ediFile:
 #https://stackoverflow.com/questions/63596329/python-pandas-read-csv-with-commented-header-line
     for line in ediFile:
@@ -43,12 +42,13 @@ ediFile.close()
 logging.debug(QSOs)
 #logging.debug(QSOs['CALL'])
 
-QSOs_DX = QSOs[QSOs['QRB'] > ODX]
+QSOs_DX = QSOs[QSOs['QRB'] > ODX].copy()        #.copy needed to avoid SettingWithCopyWarning
 
 logging.debug(QSOs_DX)
 
 QSOs_DX.drop(columns=['MODE', 'SENT_RST', 'SENT_NR', 'RECEIVED_RST', 'RECEIVED_NUMBER', \
                     'EXCHANGE', 'N_EXCH', 'N_LOCATOR', 'N_DXCC', 'DUPE'], inplace=True)
+
 
 #QSO_DX['newDate'] = pd.to_datetime(QSO_DX.checkin).dt.strftime("%m/%d/%Y")
 
@@ -63,7 +63,9 @@ QSOs_DX['TIME'] =  QSOs_DX['TIME'].dt.strftime('%H:%M')
 #QSOs_DX['DATE'] = QSOs_DX['DATE']
 
 #QSOs_DX['DATE'] = QSOs_DX['DATE'].to_datetime(QSOs_DX['DATE'], format='%Y%m%d')
-logging.debug(QSOs_DX)
+
+logging.info('QSOs with distance over %s km:', ODX)
+logging.info(QSOs_DX)
 
 
 
