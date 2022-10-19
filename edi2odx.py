@@ -16,9 +16,9 @@ ODX = {'50 MHz': 1000,
        '2,3 GHz': 300}
 #################################################################################################
 
-# Unfortunately 432 or 435 MHz exist as band definition (Wintest versus N1MM!)
-# OK1KKW and DARC definition of PBand differ...
-# therefore entry is copied in the dictionary
+# Unfortunately 432 or 435 MHz exist both as band definition (Wintest versus N1MM!)
+# OK1KKW and DARC definition of PBand also differ...therefore the entry is copied in the dictionary
+# it might be necessary to do the same for other bands if needed.
 ODX['435 MHz'] = ODX['432 MHz']
 
 start = 'YYYYMMDD'       # Just in case those arguments would be empty in the EDI file
