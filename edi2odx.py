@@ -21,11 +21,6 @@ ODX = {'50 MHz': 1000,
 # it might be necessary to do the same for other bands if needed.
 ODX['435 MHz'] = ODX['432 MHz']
 
-start = 'YYYYMMDD'       # Just in case those arguments would be empty in the EDI file
-band = 'BAND'
-call = 'CALLSIGN'
-
-
 def read_edi_file(filename):
     # Read one EDI file and returns
     # qsos_list: dataframe containing all the QSO of the EDI file
@@ -33,6 +28,10 @@ def read_edi_file(filename):
     # call_sign: station callsign
     # band_edi: operating band, according to EDI specification
     # band_file_name: operating band, with space and comma replaced by underscore, for usage as file name
+    contest_start = 'YYYYMMDD'  # Just in case those arguments would be empty in the EDI file
+    call_sign = 'CALLSIGN'
+    band_edi = 'BAND'
+    band_file_name = 'BAND'
 
     with open(filename, 'r', encoding="utf-8", errors="ignore") as ediFile:
         # start by parsing the header ([REG1TEST;1] section of the file to extract start date, call and band
@@ -53,7 +52,7 @@ def read_edi_file(filename):
                 logging.debug(line)
                 traffic_band = line[6:-1]
                 band_edi = traffic_band  # To be used for selecting the ODX distance in dictionary
-                band_file_name = band.replace(' ', '')  # To be used in the filenames (no space, no comma)
+                band_file_name = traffic_band.replace(' ', '')  # To be used in the filenames (no space, no comma)
                 band_file_name = band_file_name.replace(',', '_')
                 logging.info('The operating band is: %s', band_edi)
 
