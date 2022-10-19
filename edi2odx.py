@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# Written by Yves OESCH / HB9DTX
+# Hosted on https://github.com/HB9DTX/EDI2ODX
 import pandas as pd  # sudo apt-get install python3-pandas
 import logging
 import os
