@@ -17,19 +17,19 @@ ODX = {'50 MHz': 1000,
 #################################################################################################
 
 # Unfortunately 432 or 435 MHz exist as band definition (Wintest versus N1MM!)
-# OK1KKW and DARC definition of PBAND differ...
+# OK1KKW and DARC definition of PBand differ...
 # therefore entry is copied in the dictionary
 ODX['435 MHz'] = ODX['432 MHz']
 
-start = 'YYYMMDD'       # Just in case those arguments would be empty in the EDI file
+start = 'YYYYMMDD'       # Just in case those arguments would be empty in the EDI file
 band = 'BAND'
 call = 'CALLSIGN'
 
 
 def read_edi_file(filename):
     # Read one EDI file and returns
-    # qsos_list: dataframe containg all the QSO of the EDI file
-    # contest_start: String describng the contest start date YYYMMDD
+    # qsos_list: dataframe containing all the QSO of the EDI file
+    # contest_start: String describing the contest start date YYYYMMDD
     # call_sign: station callsign
     # band_edi: operating band, according to EDI specification
     # band_file_name: operating band, with space and comma replaced by underscore, for usage as file name
@@ -100,7 +100,7 @@ def select_odx_only(qsos, distance_limit):
 
 def generate_xlsx_csv_files(qsos_dx, contest_start, call_sign, traffic_band):
     # generate output files in xlsx and text files for the QSO's given as input
-    # contest start date, sallsign and band are used to create "unique" filenames
+    # contest start date, callsign and band are used to create "unique" filenames
     output_file_name = contest_start + '_' + call_sign + '__' + traffic_band + '_DXs'
     # double underscore recommended for readability because one might appear in the band as decimal point (1_3GHz)
 
@@ -113,12 +113,10 @@ def generate_xlsx_csv_files(qsos_dx, contest_start, call_sign, traffic_band):
     qsos_dx.to_excel(excel_file_name, index=False)  # maybe requires installing XlsxWriter package?
     return
 
+
 ##############################################################################################
 # Main program starts here
 ##############################################################################################
-
-
-
 logging.info('Program START')
 logging.info('Distance limits to select the QSOs, per band: %s', ODX)
 
@@ -133,7 +131,7 @@ for file in file_list:
     logging.info('Processing %s', file)
     [QSOs, start, call, bandEDI, bandFileName] = read_edi_file(file)    # read one EDI file
     logging.debug(QSOs)
-    QSOs_DX = select_odx_only(QSOs, ODX[bandEDI])                       # selet best DX's
+    QSOs_DX = select_odx_only(QSOs, ODX[bandEDI])                       # select best DX's
     logging.debug(QSOs_DX)
     generate_xlsx_csv_files(QSOs_DX, start, call, bandFileName)         # generate output files
 
