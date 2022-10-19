@@ -1,5 +1,6 @@
 import pandas as pd  # sudo apt-get install python3-pandas
 import logging
+import os
 
 
 # This dictionary sets the distance limits in km to select the interesting QSO's (per band)
@@ -81,18 +82,24 @@ def generate_xlsx_csv_files(qsos_dx, call_sign, band):
     return
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logging.info('Program START')
 logging.info('Distance limits to select the QSOs, per band: %s', ODX)
 
 # [QSOs, call, bandEDI, bandFileName] = read_edi_file('HB9XC_1240.edi')
 
-[QSOs, call, bandEDI, bandFileName] = read_edi_file('HELVETIA-2022_UHF@HB9N.435_MHz.EDI')
+file_list = []
+for file in os.listdir():                           # list only EDI files
+    if file.endswith(".edi") or file.endswith(".EDI"):
+        file_list.append(file)
+logging.info('EDI files to process: %s', file_list)
 
-logging.debug(QSOs)
-QSOs_DX = select_odx_only(QSOs, ODX[bandEDI])
-logging.debug(QSOs_DX)
-generate_xlsx_csv_files(QSOs_DX, call, bandFileName)
+
+for file in file_list:
+    [QSOs, call, bandEDI, bandFileName] = read_edi_file(file)
+    logging.debug(QSOs)
+    QSOs_DX = select_odx_only(QSOs, ODX[bandEDI])
+    logging.debug(QSOs_DX)
+    generate_xlsx_csv_files(QSOs_DX, call, bandFileName)
 
 logging.info('Program END')
-# logging.debug(QSOs['CALL'])
