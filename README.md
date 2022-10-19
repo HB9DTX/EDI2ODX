@@ -18,12 +18,27 @@ In case of TXT use TAB as separator.*
 
 
 
+
+
 # Installation
 1. Clone the project or simply copy "edi2odx.py" locally
+*git clone https://github.com/HB9DTX/EDI2ODX.git*
 2. Install the *pandas* library if it is not already installed
 
 # Usage
 1. Copy any number of EDI file in the current directory
-2. optional: edit the distance limits for selecting the QSO on the different bands
+2. (Optional: edit the distance limits for selecting the QSO on the different bands in the first lines of the script)
 3. Run the script
-4. .xlsx and .txt files are generated in the local directory 
+4. Best DXs files are generated in the local directory. The generated file name contains the contest start date, the call and the band as stated in the EDI file (ex: 20221001_HB9XC__432MHz_DXs). .xlsx and .txt are both available
+
+
+# References
+- https://ok2kkw.com/ediformat.htm
+- https://www.darc.de/fileadmin/_migrated/content_uploads/EDI_REG1TEST.pdf
+
+
+# Disclaimer
+The script is provided without any warranty. But given the fact that original EDI files remain untouched, the risk that something goes wrong is very low. Worst case: the script doesn't run!
+
+# License
+GNU General Public License: https://opensource.org/licenses/gpl-license

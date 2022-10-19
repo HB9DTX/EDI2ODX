@@ -11,6 +11,10 @@ ODX = {'144 MHz': 700, '432 MHz': 500, '1,3 GHz': 300}
 # therefore entry is copied in the dictionary
 ODX['435 MHz'] = ODX['432 MHz']
 
+start = 'YYYMMDD'       # Just in case those arguments would be empty in the EDI file
+band = 'BAND'
+call = 'CALLSIGN'
+
 
 def read_edi_file(filename):
     # with open('HB9XC_432.edi', 'r') as ediFile:
