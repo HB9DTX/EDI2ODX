@@ -4,7 +4,6 @@
 import pandas as pd  # sudo apt-get install python3-pandas
 import logging
 import os
-logging.basicConfig(level=logging.INFO)
 
 #################################################################################################
 # This dictionary sets the distance limits in km to select the interesting QSO's (per band)
@@ -20,6 +19,9 @@ ODX = {'50 MHz': 1000,
 # OK1KKW and DARC definition of PBand also differ...therefore the entry is copied in the dictionary
 # it might be necessary to do the same for other bands if needed.
 ODX['435 MHz'] = ODX['432 MHz']
+
+logging.basicConfig(level=logging.INFO)
+INCLUDEMODE = True      # True to include a transmission mode column in the generated file
 
 def read_edi_file(filename):
     # Read one EDI file and returns
@@ -77,9 +79,13 @@ def select_odx_only(qsos, distance_limit):
     qsos_dx = qsos[qsos['QRB'] > distance_limit].copy()  # .copy needed to avoid SettingWithCopyWarning
     logging.debug(qsos_dx)
 
-    qsos_dx.drop(columns=['MODE', 'SENT_RST', 'SENT_NR', 'RECEIVED_RST', 'RECEIVED_NUMBER',
-                          'EXCHANGE', 'N_EXCH', 'N_LOCATOR', 'N_DXCC', 'DUPE'], inplace=True)
+    # qsos_dx.drop(columns=['MODE', 'SENT_RST', 'SENT_NR', 'RECEIVED_RST', 'RECEIVED_NUMBER',
+    #                      'EXCHANGE', 'N_EXCH', 'N_LOCATOR', 'N_DXCC', 'DUPE'], inplace=True)
+    # qsos_dx.drop(columns=['MODE', 'SENT_NR', 'RECEIVED_RST', 'RECEIVED_NUMBER',
+    #                     'EXCHANGE', 'N_EXCH', 'N_LOCATOR', 'N_DXCC', 'DUPE'], inplace=True)
     # removes unusefull columns
+    qsos_dx.drop(columns=['SENT_NR', 'SENT_RST', 'RECEIVED_RST', 'RECEIVED_NUMBER',
+                          'EXCHANGE', 'N_EXCH', 'N_LOCATOR', 'N_DXCC', 'DUPE'], inplace=True)
 
     qsos_dx['DATE'] = pd.to_datetime(qsos_dx['DATE'], format='%y%m%d')
     qsos_dx['DATE'] = qsos_dx['DATE'].dt.strftime('%Y-%m-%d')
@@ -88,6 +94,15 @@ def select_odx_only(qsos, distance_limit):
     qsos_dx['TIME'] = pd.to_datetime(qsos_dx['TIME'], format='%H%M')
     qsos_dx['TIME'] = qsos_dx['TIME'].dt.strftime('%H:%M')
     # conversion to format expected by DUBUS
+
+    #df['Labels'] = ['Bad' if x < 7.000 else 'Good' if 7.000 <= x < 8.000 else 'Very Good' for x in df['Score']]
+    #qsos_dx['long'] = [len(str(x)) for x in qsos_dx['SENT_RST']]
+    #logging.debug(qsos_dx['long'])
+    if INCLUDEMODE:
+        qsos_dx['MOD'] = ['c' if x == 2 else 's' if x == 1 else '' for x in qsos_dx['MODE']]
+        logging.debug(qsos_dx['MOD'])
+    qsos_dx.drop(columns=['MODE'], inplace=True)
+    # replace the 'MODE' column at EDI format by a 'MOD' with only 's' (SSB) or 'c' (CW) as seen in recent DUBUS
 
     nr_qso_dx = qsos_dx.shape[0]
     logging.debug(nr_qso_dx)
