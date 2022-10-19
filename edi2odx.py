@@ -18,6 +18,10 @@ def read_edi_file(filename):
     with open(filename, 'r', encoding="utf-8", errors="ignore") as ediFile:
         # https://stackoverflow.com/questions/63596329/python-pandas-read-csv-with-commented-header-line
         for line in ediFile:
+            if line.startswith('TDate='):
+                logging.debug('contest start time found')
+                contest_start = line[6:14]
+
             if line.startswith('PCall='):
                 logging.debug('call found')
                 logging.debug(line)
@@ -45,7 +49,7 @@ def read_edi_file(filename):
         # Column names matching EDI file format specification
 
     ediFile.close()
-    return qsos_list, call_sign, band_edi, band_file_name
+    return qsos_list, contest_start, call_sign, band_edi, band_file_name
 
 
 def select_odx_only(qsos, distance_limit):
@@ -69,8 +73,9 @@ def select_odx_only(qsos, distance_limit):
     return qsos_dx
 
 
-def generate_xlsx_csv_files(qsos_dx, call_sign, band):
-    output_file_name = call_sign + '__' + band
+def generate_xlsx_csv_files(qsos_dx, contest_start, call_sign, band):
+    output_file_name = contest_start + '_' + call_sign + '__' + band + '_DXs'
+    # double underscore recommended fore readability because one might appear in the band as decimal point (1_3GHz)
 
     csv_filename = output_file_name + '.txt'
     logging.debug(csv_filename)
@@ -96,10 +101,10 @@ logging.info('EDI files to process: %s', file_list)
 
 
 for file in file_list:
-    [QSOs, call, bandEDI, bandFileName] = read_edi_file(file)
+    [QSOs, start, call, bandEDI, bandFileName] = read_edi_file(file)
     logging.debug(QSOs)
     QSOs_DX = select_odx_only(QSOs, ODX[bandEDI])
     logging.debug(QSOs_DX)
-    generate_xlsx_csv_files(QSOs_DX, call, bandFileName)
+    generate_xlsx_csv_files(QSOs_DX, start, call, bandFileName)
 
 logging.info('Program END')
