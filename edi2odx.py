@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# Written by Yves OESCH / HB9DTX
-# Hosted on https://github.com/HB9DTX/EDI2ODX
+# Written by Yves OESCH / HB9DTX / http://www.yvesoesch.ch
+# Project hosted on https://github.com/HB9DTX/EDI2ODX
 import pandas as pd  # sudo apt-get install python3-pandas
 import logging
 import os
@@ -13,15 +13,16 @@ ODX = {'50 MHz': 1000,
        '432 MHz': 600,
        '1,3 GHz': 400,
        '2,3 GHz': 300}
-#################################################################################################
 
+INCLUDEMODE = True      # True to include a transmission mode column in the generated file
+#################################################################################################
 # Unfortunately 432 or 435 MHz exist both as band definition (Wintest versus N1MM!)
 # OK1KKW and DARC definition of PBand also differ...therefore the entry is copied in the dictionary
 # it might be necessary to do the same for other bands if needed.
 ODX['435 MHz'] = ODX['432 MHz']
 
 logging.basicConfig(level=logging.INFO)
-INCLUDEMODE = True      # True to include a transmission mode column in the generated file
+
 
 def read_edi_file(filename):
     # Read one EDI file and returns
@@ -95,9 +96,9 @@ def select_odx_only(qsos, distance_limit):
     qsos_dx['TIME'] = qsos_dx['TIME'].dt.strftime('%H:%M')
     # conversion to format expected by DUBUS
 
-    #df['Labels'] = ['Bad' if x < 7.000 else 'Good' if 7.000 <= x < 8.000 else 'Very Good' for x in df['Score']]
-    #qsos_dx['long'] = [len(str(x)) for x in qsos_dx['SENT_RST']]
-    #logging.debug(qsos_dx['long'])
+    # df['Labels'] = ['Bad' if x < 7.000 else 'Good' if 7.000 <= x < 8.000 else 'Very Good' for x in df['Score']]
+    # qsos_dx['long'] = [len(str(x)) for x in qsos_dx['SENT_RST']]
+    # logging.debug(qsos_dx['long'])
     if INCLUDEMODE:
         qsos_dx['MOD'] = ['c' if x == 2 else 's' if x == 1 else '' for x in qsos_dx['MODE']]
         logging.debug(qsos_dx['MOD'])
