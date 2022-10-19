@@ -2,7 +2,6 @@ import pandas as pd  # sudo apt-get install python3-pandas
 import logging
 import os
 
-
 # This dictionary sets the distance limits in km to select the interesting QSO's (per band)
 # band identifier according to EDI format spec for PBand argument.
 ODX = {'144 MHz': 700, '432 MHz': 500, '1,3 GHz': 300}
