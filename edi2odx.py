@@ -8,24 +8,28 @@ import os
 #################################################################################################
 # This dictionary sets the distance limits in km to select the interesting QSO's (per band)
 # band identifier according to EDI format spec for PBand argument.
+# it can be edited if the min QSO distance to report are to be changed
+# it can be extended it other bands are of interest
 ODX = {'50 MHz': 1000,
        '144 MHz': 800,
        '432 MHz': 600,
        '1,3 GHz': 400,
        '2,3 GHz': 300}
 
-INCLUDEMODE = True      # True to include a transmission mode column in the generated file
+INCLUDEMODECOLUMN = True      # True to include a transmission mode (SSB/CW) column in the generated file
+# Unclear now whether DUBUS prefers this 'MOD' column to be added or not
+
 #################################################################################################
+ODX['435 MHz'] = ODX['432 MHz']
 # Unfortunately 432 or 435 MHz exist both as band definition (Wintest versus N1MM!)
 # OK1KKW and DARC definition of PBand also differ...therefore the entry is copied in the dictionary
 # it might be necessary to do the same for other bands if needed.
-ODX['435 MHz'] = ODX['432 MHz']
 
 logging.basicConfig(level=logging.INFO)
 
 
 def read_edi_file(filename):
-    # Read one EDI file and returns
+    # Read one EDI file and returns:
     # qsos_list: dataframe containing all the QSO of the EDI file
     # contest_start: String describing the contest start date YYYYMMDD
     # call_sign: station callsign
@@ -77,37 +81,31 @@ def read_edi_file(filename):
 def select_odx_only(qsos, distance_limit):
     # returns a dataframe containing only the interesting QSO's of a given log file
     # i.e. the ones with distance exceeding a value given as parameter
+    # filters out the columns of interest for the DUBUS report, removes the others
     qsos_dx = qsos[qsos['QRB'] > distance_limit].copy()  # .copy needed to avoid SettingWithCopyWarning
     logging.debug(qsos_dx)
 
-    # qsos_dx.drop(columns=['MODE', 'SENT_RST', 'SENT_NR', 'RECEIVED_RST', 'RECEIVED_NUMBER',
-    #                      'EXCHANGE', 'N_EXCH', 'N_LOCATOR', 'N_DXCC', 'DUPE'], inplace=True)
-    # qsos_dx.drop(columns=['MODE', 'SENT_NR', 'RECEIVED_RST', 'RECEIVED_NUMBER',
-    #                     'EXCHANGE', 'N_EXCH', 'N_LOCATOR', 'N_DXCC', 'DUPE'], inplace=True)
-    # removes unusefull columns
+    # removes unusefull columns, keeps DATE, TIME, CALL, MODE, LOCATOR and QRB only
     qsos_dx.drop(columns=['SENT_NR', 'SENT_RST', 'RECEIVED_RST', 'RECEIVED_NUMBER',
                           'EXCHANGE', 'N_EXCH', 'N_LOCATOR', 'N_DXCC', 'DUPE'], inplace=True)
 
     qsos_dx['DATE'] = pd.to_datetime(qsos_dx['DATE'], format='%y%m%d')
     qsos_dx['DATE'] = qsos_dx['DATE'].dt.strftime('%Y-%m-%d')
-    # conversion to format expected by DUBUS
+    # DATE conversion to format expected by DUBUS
 
     qsos_dx['TIME'] = pd.to_datetime(qsos_dx['TIME'], format='%H%M')
     qsos_dx['TIME'] = qsos_dx['TIME'].dt.strftime('%H:%M')
-    # conversion to format expected by DUBUS
+    # TIME conversion to format expected by DUBUS
 
-    # df['Labels'] = ['Bad' if x < 7.000 else 'Good' if 7.000 <= x < 8.000 else 'Very Good' for x in df['Score']]
-    # qsos_dx['long'] = [len(str(x)) for x in qsos_dx['SENT_RST']]
-    # logging.debug(qsos_dx['long'])
-    if INCLUDEMODE:
+    if INCLUDEMODECOLUMN:
+        # replace the 'MODE' column at EDI format by a 'MOD' with only 's' (SSB) or 'c' (CW) as seen in recent DUBUS
+        # as place it at the end of the dataframe
         qsos_dx['MOD'] = ['c' if x == 2 else 's' if x == 1 else '' for x in qsos_dx['MODE']]
         logging.debug(qsos_dx['MOD'])
     qsos_dx.drop(columns=['MODE'], inplace=True)
-    # replace the 'MODE' column at EDI format by a 'MOD' with only 's' (SSB) or 'c' (CW) as seen in recent DUBUS
 
     nr_qso_dx = qsos_dx.shape[0]
     logging.debug(nr_qso_dx)
-
     logging.info('%s QSOs with distance over %s km:', nr_qso_dx, distance_limit)
     logging.debug(qsos_dx)
     return qsos_dx
@@ -118,6 +116,8 @@ def generate_xlsx_csv_files(qsos_dx, contest_start, call_sign, traffic_band):
     # contest start date, callsign and band are used to create "unique" filenames
     output_file_name = contest_start + '_' + call_sign + '__' + traffic_band + '_DXs'
     # double underscore recommended for readability because one might appear in the band as decimal point (1_3GHz)
+    if INCLUDEMODECOLUMN:
+        output_file_name = output_file_name + '_with_mode'
 
     csv_filename = output_file_name + '.txt'
     logging.debug(csv_filename)
@@ -134,10 +134,11 @@ def generate_xlsx_csv_files(qsos_dx, contest_start, call_sign, traffic_band):
 ##############################################################################################
 logging.info('Program START')
 logging.info('Distance limits to select the QSOs, per band: %s', ODX)
+logging.info('MOD column added: %s', INCLUDEMODECOLUMN)
 
 file_list = []                                      # list all EDI files in the local folder
-for file in os.listdir():                           # list only EDI files
-    if file.endswith(".edi") or file.endswith(".EDI"):
+for file in os.listdir():
+    if file.endswith(".edi") or file.endswith(".EDI"):  # list only EDI files
         file_list.append(file)
 logging.info('EDI files to process: %s', file_list)
 
