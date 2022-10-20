@@ -16,8 +16,8 @@ ODX = {'50 MHz': 1000,
        '1,3 GHz': 400,
        '2,3 GHz': 300}
 
-#INCLUDEMODECOLUMN = True      # True to include a transmission mode (SSB/CW) column in the generated file
-INCLUDEMODECOLUMN = False      # True to include a transmission mode (SSB/CW) column in the generated file
+INCLUDEMODECOLUMN = True      # True to include a transmission mode (SSB/CW) column in the generated file
+#INCLUDEMODECOLUMN = False      # True to include a transmission mode (SSB/CW) column in the generated file
 # Unclear now whether DUBUS prefers this 'MOD' column to be added or not
 
 #################################################################################################
@@ -90,7 +90,7 @@ def select_odx_only(qsos, distance_limit):
     # returns a dataframe containing only the interesting QSO's of a given log file
     # i.e. the ones with distance exceeding a value given as parameter
     # filters out the columns of interest for the DUBUS report, removes the others
-    qsos_dx = qsos[qsos['QRB'] > distance_limit].copy()  # .copy needed to avoid SettingWithCopyWarning
+    qsos_dx = qsos[qsos['QRB'] >= distance_limit].copy()  # .copy needed to avoid SettingWithCopyWarning
     logging.debug(qsos_dx)
 
     # removes unusefull columns, keeps DATE, TIME, CALL, MODE, LOCATOR and QRB only
@@ -104,6 +104,9 @@ def select_odx_only(qsos, distance_limit):
     qsos_dx['TIME'] = pd.to_datetime(qsos_dx['TIME'], format='%H%M')
     qsos_dx['TIME'] = qsos_dx['TIME'].dt.strftime('%H:%M')
     # TIME conversion to format expected by DUBUS
+
+    qsos_dx['QRB'] = qsos_dx['QRB'].astype(str) + ' km'
+    # to match DUBUS publication
 
     if INCLUDEMODECOLUMN:
         # replace the 'MODE' column at EDI format by a 'MOD' with only 's' (SSB) or 'c' (CW) as seen in recent DUBUS
