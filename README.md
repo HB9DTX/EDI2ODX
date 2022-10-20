@@ -43,6 +43,7 @@ an option is provided to indicate the mode (SSB or CW only) as an additional col
 
 # Disclaimer
 The script is provided without any warranty. But given the fact that original EDI files remain untouched, the risk that something goes wrong is very low. Worst case: the script doesn't run!
+The script has only been tested under Ubuntu / python 3
 
 # License
 GNU General Public License: https://opensource.org/licenses/gpl-license
