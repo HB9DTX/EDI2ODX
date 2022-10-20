@@ -31,8 +31,8 @@ an option is provided to indicate the mode (SSB or CW only) as an additional col
 1. Copy one or more EDI file in the current directory
 2. (Optional: edit the distance limits for selecting the QSO on the different bands in the first lines of the script)
 3. (Optional: select whether the 'MODE' column should be added or not)
-3. Run the script
-4. Best DXs files are generated in the local directory. The generated file name contains the contest start date, the call and the band as stated in the EDI file (ex: 20221001_HB9XC__432MHz_DXs). .xlsx and .txt are both available
+4. Run the script
+5. Best DXs files are generated in the local directory. The generated file name contains the contest start date, the call and the band as stated in the EDI file (ex: 20221001_HB9XC__432MHz_DXs). .xlsx and .txt are both available
 
 
 # References
@@ -43,6 +43,7 @@ an option is provided to indicate the mode (SSB or CW only) as an additional col
 
 # Disclaimer
 The script is provided without any warranty. But given the fact that original EDI files remain untouched, the risk that something goes wrong is very low. Worst case: the script doesn't run!
+
 The script has only been tested under Ubuntu / python 3
 
 # License

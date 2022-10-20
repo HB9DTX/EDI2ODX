@@ -17,7 +17,7 @@ ODX = {'50 MHz': 1000,
        '2,3 GHz': 300}
 
 INCLUDEMODECOLUMN = True      # True to include a transmission mode (SSB/CW) column in the generated file
-#INCLUDEMODECOLUMN = False      # True to include a transmission mode (SSB/CW) column in the generated file
+# INCLUDEMODECOLUMN = False      # True to include a transmission mode (SSB/CW) column in the generated file
 # Unclear now whether DUBUS prefers this 'MOD' column to be added or not
 
 #################################################################################################
@@ -40,7 +40,7 @@ def read_edi_file(filename):
     call_sign = 'CALLSIGN'
     band_edi = 'BAND'
     band_file_name = 'BAND'
-    locator = 'LOCATOR'
+    wwlocator = 'LOCATOR'
 
     with open(filename, 'r', encoding="utf-8", errors="ignore") as ediFile:
         # start by parsing the header ([REG1TEST;1] section of the file to extract start date, call and band
