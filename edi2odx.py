@@ -16,7 +16,8 @@ ODX = {'50 MHz': 1000,
        '1,3 GHz': 400,
        '2,3 GHz': 300}
 
-INCLUDEMODECOLUMN = True      # True to include a transmission mode (SSB/CW) column in the generated file
+#INCLUDEMODECOLUMN = True      # True to include a transmission mode (SSB/CW) column in the generated file
+INCLUDEMODECOLUMN = False      # True to include a transmission mode (SSB/CW) column in the generated file
 # Unclear now whether DUBUS prefers this 'MOD' column to be added or not
 
 #################################################################################################
@@ -39,6 +40,7 @@ def read_edi_file(filename):
     call_sign = 'CALLSIGN'
     band_edi = 'BAND'
     band_file_name = 'BAND'
+    locator = 'LOCATOR'
 
     with open(filename, 'r', encoding="utf-8", errors="ignore") as ediFile:
         # start by parsing the header ([REG1TEST;1] section of the file to extract start date, call and band
@@ -53,6 +55,12 @@ def read_edi_file(filename):
                 logging.debug(line)
                 call_sign = line[6:-1]
                 logging.info('The station call sign is: %s', call_sign)
+
+            if line.startswith('PWWLo='):
+                logging.debug('locator found')
+                logging.debug(line)
+                wwlocator = line[6:-1]
+                logging.info('The station locator is: %s', wwlocator)
 
             if line.startswith('PBand='):
                 logging.debug('Band found')
@@ -75,7 +83,7 @@ def read_edi_file(filename):
         # Column names matching EDI file format specification
 
     ediFile.close()
-    return qsos_list, contest_start, call_sign, band_edi, band_file_name
+    return qsos_list, contest_start, call_sign, wwlocator, band_edi, band_file_name
 
 
 def select_odx_only(qsos, distance_limit):
@@ -111,10 +119,10 @@ def select_odx_only(qsos, distance_limit):
     return qsos_dx
 
 
-def generate_xlsx_csv_files(qsos_dx, contest_start, call_sign, traffic_band):
+def generate_xlsx_csv_files(qsos_dx, contest_start, call_sign, wwlocator, traffic_band):
     # generate output files in xlsx and text files for the QSO's given as input
     # contest start date, callsign and band are used to create "unique" filenames
-    output_file_name = contest_start + '_' + call_sign + '__' + traffic_band + '_DXs'
+    output_file_name = contest_start + '_' + call_sign + '_' + wwlocator + '__' + traffic_band + '_DXs'
     # double underscore recommended for readability because one might appear in the band as decimal point (1_3GHz)
     if INCLUDEMODECOLUMN:
         output_file_name = output_file_name + '_with_mode'
@@ -145,10 +153,10 @@ logging.info('EDI files to process: %s', file_list)
 
 for file in file_list:
     logging.info('Processing %s', file)
-    [QSOs, start, call, bandEDI, bandFileName] = read_edi_file(file)    # read one EDI file
+    [QSOs, start, call, locator, bandEDI, bandFileName] = read_edi_file(file)    # read one EDI file
     logging.debug(QSOs)
     QSOs_DX = select_odx_only(QSOs, ODX[bandEDI])                       # select best DX's
     logging.debug(QSOs_DX)
-    generate_xlsx_csv_files(QSOs_DX, start, call, bandFileName)         # generate output files
+    generate_xlsx_csv_files(QSOs_DX, start, call, locator, bandFileName)         # generate output files
 
 logging.info('Program END')
