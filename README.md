@@ -25,7 +25,7 @@ an option is provided to indicate the mode (SSB or CW only) as an additional col
 # Installation
 1. Clone the project   
 `git clone https://github.com/HB9DTX/EDI2ODX.git` or simply copy "edi2odx.py" locally
-2. Install the *pandas* library if needed
+2. Install the *python3-pandas* library if needed
 
 # Usage
 1. Copy one or more EDI file in the current directory
