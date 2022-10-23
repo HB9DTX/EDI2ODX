@@ -20,6 +20,9 @@ INCLUDEMODECOLUMN = True      # True to include a transmission mode (SSB/CW) col
 # INCLUDEMODECOLUMN = False      # True to include a transmission mode (SSB/CW) column in the generated file
 # Unclear now whether DUBUS prefers this 'MOD' column to be added or not
 
+#SORTBYQRB = False
+SORTBYQRB = True               # If TRUE: Sorts the ODX from longest QRB to smallest
+
 #################################################################################################
 ODX['435 MHz'] = ODX['432 MHz']
 # Unfortunately 432 or 435 MHz exist both as band definition (Wintest versus N1MM!)
@@ -114,6 +117,10 @@ def select_odx_only(qsos, distance_limit):
         qsos_dx['MOD'] = ['c' if x == 2 else 's' if x == 1 else '' for x in qsos_dx['MODE']]
         logging.debug(qsos_dx['MOD'])
     qsos_dx.drop(columns=['MODE'], inplace=True)
+
+    if SORTBYQRB:
+        qsos_dx.sort_values(by=['QRB', 'DATE', 'TIME'], ascending=[False, True, True], inplace=True)
+        # Date and time sorting as 2nd/3rd priority, otherwise log order is random for QSO with same QRB
 
     nr_qso_dx = qsos_dx.shape[0]
     logging.debug(nr_qso_dx)
