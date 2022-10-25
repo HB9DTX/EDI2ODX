@@ -4,6 +4,13 @@
 import pandas as pd  # sudo apt-get install python3-pandas
 import logging
 import os
+import numpy as np
+import matplotlib.pyplot as plt     #as package
+import math
+import geotiler # as package, usage: https://wrobell.dcmod.org/geotiler/usage.html
+import maiden   # in local folder
+
+
 
 #################################################################################################
 # This dictionary sets the distance limits in km to select the interesting QSO's (per band)
@@ -21,7 +28,7 @@ INCLUDEMODECOLUMN = True      # True to include a transmission mode (SSB/CW) col
 # Unclear now whether DUBUS prefers this 'MOD' column to be added or not
 
 #SORTBYQRB = False
-SORTBYQRB = True               # If TRUE: Sorts the ODX from longest QRB to smallest
+SORTBYQRB = True               # If True: Sorts the ODX from longest QRB to smallest. False= chronological
 
 #################################################################################################
 ODX['435 MHz'] = ODX['432 MHz']
@@ -89,6 +96,9 @@ def read_edi_file(filename):
     return qsos_list, contest_start, call_sign, wwlocator, band_edi, band_file_name
 
 
+
+
+
 def select_odx_only(qsos, distance_limit):
     # returns a dataframe containing only the interesting QSO's of a given log file
     # i.e. the ones with distance exceeding a value given as parameter
@@ -146,6 +156,110 @@ def generate_xlsx_csv_files(qsos_dx, contest_start, call_sign, wwlocator, traffi
     qsos_dx.to_excel(excel_file_name, index=False)  # maybe requires installing XlsxWriter package?
     return
 
+def compute_dist_az(df, myLocator):
+    mhl = maiden.Maiden()
+    myLatLong = mhl.maiden2latlon(myLocator)
+    distances = np.zeros(df.shape[0])
+    azimuths = np.zeros(df.shape[0])
+    latitudes = np.zeros(df.shape[0])
+    longitudes = np.zeros(df.shape[0])
+    for index, contents in df.iterrows():
+        print(index, contents['LOCATOR'])
+        stationLatLong = mhl.maiden2latlon(contents['LOCATOR'])
+        if stationLatLong[0] is not None:  # a voids error if locator is not valid
+            (distances[index], azimuths[index]) = mhl.dist_az(myLatLong, stationLatLong)
+            latitudes[index] = stationLatLong[0]
+            longitudes[index] = stationLatLong[1]
+        else:  # fake / fill-in data
+            print(type(stationLatLong[0]))
+            (distances[index], azimuths[index]) = (0, 0)
+            latitudes[index] = myLatLong[0]
+            longitudes[index] = myLatLong[1]
+    df['DISTANCE2'] = distances
+    df['AZIMUTH'] = azimuths
+    df['LATITUDE'] = latitudes
+    df['LONGITUDE'] = longitudes
+    logging.debug(df[['CALL','AZIMUTH','QRB','DISTANCE2']])
+    # print(type(df['Pts'][1]))
+    # print(type(df['Distance2'][1]))
+    return(df)
+
+
+def plotStations(df, myLocator, output_file_name):
+    # Histogram of azimuths
+    fig1, ax1 = plt.subplots()
+    #ax1 = fig1.add_subplot(2,1,1)
+    ax1.set_title('Densité de probabilité des azimuths calculée depuis ' + myLocator + '\npour le contest: ')
+    ax1.hist(df['AZIMUTH'], bins=int(math.sqrt(df.shape[0])))
+    ax1.set_xlabel('Azimuth')
+    ax1.set_ylabel('Nombre de QSO')
+    ax1.set_xlim([0, 360])
+
+    annotation = 'Nombre total de QSO dans le log: ' + str(df.shape[0])
+    ax1.text(0.5, 0.95, annotation, transform=ax1.transAxes, ha='center', va='top',
+             bbox=dict(boxstyle='square', facecolor='None'))
+    annotation = 'Plot: HB9DTX'
+    ax1.text(0.05, 0.0, annotation, transform=fig1.transFigure, fontsize='xx-small', color='black', ha='left',
+             va='bottom')  # transform=ax1.transAxes, =fig1.transFigure
+    plt.savefig(output_file_name + '_Azimuth' + '.png')
+    # plt.show()
+    plt.close()
+
+    # Histogram of Points (Distances)
+    fig2, ax2 = plt.subplots()
+    #ax2 = fig1.add_subplot(2,1,2)
+    ax2.set_title(
+        'Densité de probabilité des distances (points) calculée depuis ' + myLocator + '\npour le contest: ')
+    ax2.hist(df['AZIMUTH'], bins=int(math.sqrt(df.shape[0])), weights=df['DISTANCE2'])
+    ax2.set_xlabel('Azimuth')
+    ax2.set_ylabel('Nombre de Points')
+    ax2.set_xlim([0, 360])
+    annotation = 'Nombre total de QSO dans le log: ' + str(df.shape[0]) + '\nNombre total de points: '+str(round(df['QRB'].sum()))
+    ax2.text(0.5, 0.95, annotation, transform=ax2.transAxes, ha='center', va='top',
+             bbox=dict(boxstyle='square', facecolor='None'))
+
+    annotation = 'Plot: HB9DTX'
+    ax2.text(0.05, 0, annotation, fontsize='xx-small', color='black', transform=fig1.transFigure, ha='left',
+             va='bottom')
+    plt.savefig(output_file_name + '_Points' + '.png')
+    # plt.show()
+    plt.close()
+
+    # Geographical map of stations
+    map_bbox = (-10.0, 40.0, 30.0, 58.0)  # lower left, upper right, (long, lat) #central europe
+    mm = geotiler.Map(extent=map_bbox, zoom=5)
+    img = geotiler.render_map(mm)
+    # print(df)
+    # print(df[['Call', 'longitude', 'latitude']])
+
+    points=list(zip(df['LONGITUDE'], df['LATITUDE']))
+    x, y = zip(*(mm.rev_geocode(p) for p in points))
+
+    mhl = maiden.Maiden()
+    myLatLong = mhl.maiden2latlon(myLocator)
+    myLongLat = (myLatLong[1], myLatLong[0])
+    mx,my = mm.rev_geocode(myLongLat)
+
+    fig3, ax3 = plt.subplots(tight_layout=True)
+    ax3.imshow(img)
+    ax3.scatter(x, y, c='blue', edgecolor='none', s=3, alpha=0.9, label='all stations')
+    ax3.scatter(mx, my, c='red', edgecolor='none', s=50, alpha=0.9, label='My station')
+    #ax3.scatter(mx, my, c='red', edgecolor='none', s=50, alpha=0.9, label='My station')
+
+    ax3.set_title('Positions des stations pour le contest: ')
+    plt.axis('off')
+
+    annotation = 'Nombre total de stations dans le logs: ' + str(df.shape[0])
+    ax3.text(1, 0, annotation, transform=ax3.transAxes, ha='right', va='bottom',
+        bbox=dict(boxstyle='square', facecolor='white'))
+
+    annotation = 'Plot: HB9DTX\nMap data: OpenStreetMap.'
+    ax3.text(0, 0, annotation, fontsize='xx-small',color='blue',transform=ax3.transAxes, ha='left', va='bottom')#,
+             #bbox=dict(boxstyle='square', facecolor='white'))
+    #plt.savefig(logFolder + '/' + contestName + '/_StationsLocations_' + myLocator + '_' + band + '.png',bbox_inches='tight')
+    plt.savefig(output_file_name + '_Map' + '.png',bbox_inches='tight')
+    #plt.show()
+    plt.close()
 
 ##############################################################################################
 # Main program starts here
@@ -168,5 +282,8 @@ for file in file_list:
     QSOs_DX = select_odx_only(QSOs, ODX[bandEDI])                       # select best DX's
     logging.debug(QSOs_DX)
     generate_xlsx_csv_files(QSOs_DX, start, call, locator, bandFileName)         # generate output files
+    QSOs = compute_dist_az(QSOs, locator)
+    output_file_name = start + '_' + call + '_' + locator + '__' + bandFileName
+    plotStations(QSOs, locator, output_file_name)
 
 logging.info('Program END')
