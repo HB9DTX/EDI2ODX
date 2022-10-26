@@ -1,12 +1,12 @@
 # EDI2ODX
-Extraction of Best DX out of EDI files
+Extraction of Best DX out of EDI files. Plotting QSO statistics and stations position on map 
 
 # Motivation
 Amateur radio VHF-UHF contests generally provide the opportunity to make long distance radio contacts.Many stations are on the air at the same time, several "portable" stations having selected an elevated QTH with decent conditions (antenna and power). QSO's are typically logged electronically into an "EDI" file.
 
 The [DUBUS](http://www.dubus.org/) magazine gathers announcement of interesting radio contacts for scientific investigations. 
 
-This little script extracts the longest distance QSO's from EDI files and generates .xlsx and .txt file according to DUBUS preferred format:
+This script extracts the longest distance QSO's from EDI files and generates .xlsx and .txt file according to DUBUS preferred format:
 
 >*Preferred formatting of your report (either TXT or EXCEL) is:*
 > 
@@ -21,6 +21,11 @@ This little script extracts the longest distance QSO's from EDI files and genera
 >*In case of TXT use TAB as separator.* 
 
 an option is provided to indicate the mode (SSB or CW only) as an additional column
+
+It also generates statistics on the QSOs:
+- Density probability of the QSO amount over azimuth
+- Density probability of the QSB over azimuth
+- Display all the contacted station on a map
 
 # Installation
 1. Clone the project   
@@ -46,5 +51,7 @@ The script is provided without any warranty. But given the fact that original ED
 
 The script has only been tested under Ubuntu / python 3
 
-# License
+# Licensing
 GNU General Public License: https://opensource.org/licenses/gpl-license
+
+maiden.py module credit to: 9V1KG Klaus D Goepel, https://klsin.bpmsg.com, https://github.com/9V1KG/maidenhead
