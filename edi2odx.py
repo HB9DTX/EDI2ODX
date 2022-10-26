@@ -30,6 +30,7 @@ INCLUDEMODECOLUMN = True      # True to include a transmission mode (SSB/CW) col
 #SORTBYQRB = False
 SORTBYQRB = True               # If True: Sorts the ODX from longest QRB to smallest. False= chronological
 
+STATSMAP = True             # if True compute the azimuth/elevation stats and plot a map with all contacted stations
 #################################################################################################
 ODX['435 MHz'] = ODX['432 MHz']
 # Unfortunately 432 or 435 MHz exist both as band definition (Wintest versus N1MM!)
@@ -164,14 +165,14 @@ def compute_dist_az(df, myLocator):
     latitudes = np.zeros(df.shape[0])
     longitudes = np.zeros(df.shape[0])
     for index, contents in df.iterrows():
-        print(index, contents['LOCATOR'])
+        logging.debug(index, contents['LOCATOR'])
         stationLatLong = mhl.maiden2latlon(contents['LOCATOR'])
         if stationLatLong[0] is not None:  # a voids error if locator is not valid
             (distances[index], azimuths[index]) = mhl.dist_az(myLatLong, stationLatLong)
             latitudes[index] = stationLatLong[0]
             longitudes[index] = stationLatLong[1]
         else:  # fake / fill-in data
-            print(type(stationLatLong[0]))
+            logging.debug(type(stationLatLong[0]))
             (distances[index], azimuths[index]) = (0, 0)
             latitudes[index] = myLatLong[0]
             longitudes[index] = myLatLong[1]
@@ -185,20 +186,21 @@ def compute_dist_az(df, myLocator):
     return(df)
 
 
-def plotStations(df, myLocator, output_file_name):
+def plotStations(df, contest_start, myLocator, band, output_file_name):
     # Histogram of azimuths
     fig1, ax1 = plt.subplots()
     #ax1 = fig1.add_subplot(2,1,1)
-    ax1.set_title('Densité de probabilité des azimuths calculée depuis ' + myLocator + '\npour le contest: ')
+    ax1.set_title('Azimuth density probability computed from ' + myLocator +
+                  '\nContest ' + contest_start + '; Call ' + call + '; Band ' + band)
     ax1.hist(df['AZIMUTH'], bins=int(math.sqrt(df.shape[0])))
     ax1.set_xlabel('Azimuth')
-    ax1.set_ylabel('Nombre de QSO')
+    ax1.set_ylabel('Number of QSO')
     ax1.set_xlim([0, 360])
 
-    annotation = 'Nombre total de QSO dans le log: ' + str(df.shape[0])
+    annotation = 'Total number of QSO in log: ' + str(df.shape[0])
     ax1.text(0.5, 0.95, annotation, transform=ax1.transAxes, ha='center', va='top',
              bbox=dict(boxstyle='square', facecolor='None'))
-    annotation = 'Plot: HB9DTX'
+    annotation = 'Plot: EDI2ODX by HB9DTX'
     ax1.text(0.05, 0.0, annotation, transform=fig1.transFigure, fontsize='xx-small', color='black', ha='left',
              va='bottom')  # transform=ax1.transAxes, =fig1.transFigure
     plt.savefig(output_file_name + '_Azimuth' + '.png')
@@ -208,17 +210,17 @@ def plotStations(df, myLocator, output_file_name):
     # Histogram of Points (Distances)
     fig2, ax2 = plt.subplots()
     #ax2 = fig1.add_subplot(2,1,2)
-    ax2.set_title(
-        'Densité de probabilité des distances (points) calculée depuis ' + myLocator + '\npour le contest: ')
+    ax2.set_title('Distances density probability computed from ' + myLocator +
+                  '\nContest ' + contest_start + '; Call ' + call + '; Band ' + band)
     ax2.hist(df['AZIMUTH'], bins=int(math.sqrt(df.shape[0])), weights=df['DISTANCE2'])
     ax2.set_xlabel('Azimuth')
-    ax2.set_ylabel('Nombre de Points')
+    ax2.set_ylabel('Number of points (km)')
     ax2.set_xlim([0, 360])
-    annotation = 'Nombre total de QSO dans le log: ' + str(df.shape[0]) + '\nNombre total de points: '+str(round(df['QRB'].sum()))
+    annotation = 'Total number of QSO in log: ' + str(df.shape[0]) + '\nTotal km: '+str(round(df['QRB'].sum()))
     ax2.text(0.5, 0.95, annotation, transform=ax2.transAxes, ha='center', va='top',
              bbox=dict(boxstyle='square', facecolor='None'))
 
-    annotation = 'Plot: HB9DTX'
+    annotation = 'Plot: EDI2ODX by HB9DTX'
     ax2.text(0.05, 0, annotation, fontsize='xx-small', color='black', transform=fig1.transFigure, ha='left',
              va='bottom')
     plt.savefig(output_file_name + '_Points' + '.png')
@@ -242,18 +244,19 @@ def plotStations(df, myLocator, output_file_name):
 
     fig3, ax3 = plt.subplots(tight_layout=True)
     ax3.imshow(img)
-    ax3.scatter(x, y, c='blue', edgecolor='none', s=3, alpha=0.9, label='all stations')
+    ax3.scatter(x, y, c='purple', edgecolor='none', s=10, alpha=0.9, label='all stations')
     ax3.scatter(mx, my, c='red', edgecolor='none', s=50, alpha=0.9, label='My station')
     #ax3.scatter(mx, my, c='red', edgecolor='none', s=50, alpha=0.9, label='My station')
 
-    ax3.set_title('Positions des stations pour le contest: ')
+    ax3.set_title('Stations positions for contest ' + contest_start +
+                  '\nCall ' + call + '; Band ' + band)
     plt.axis('off')
 
-    annotation = 'Nombre total de stations dans le logs: ' + str(df.shape[0])
+    annotation = 'Total number of stations in log: ' + str(df.shape[0])
     ax3.text(1, 0, annotation, transform=ax3.transAxes, ha='right', va='bottom',
         bbox=dict(boxstyle='square', facecolor='white'))
 
-    annotation = 'Plot: HB9DTX\nMap data: OpenStreetMap.'
+    annotation = 'Plot: EDI2ODX by HB9DTX\nMap data: OpenStreetMap.'
     ax3.text(0, 0, annotation, fontsize='xx-small',color='blue',transform=ax3.transAxes, ha='left', va='bottom')#,
              #bbox=dict(boxstyle='square', facecolor='white'))
     #plt.savefig(logFolder + '/' + contestName + '/_StationsLocations_' + myLocator + '_' + band + '.png',bbox_inches='tight')
@@ -282,8 +285,10 @@ for file in file_list:
     QSOs_DX = select_odx_only(QSOs, ODX[bandEDI])                       # select best DX's
     logging.debug(QSOs_DX)
     generate_xlsx_csv_files(QSOs_DX, start, call, locator, bandFileName)         # generate output files
-    QSOs = compute_dist_az(QSOs, locator)
-    output_file_name = start + '_' + call + '_' + locator + '__' + bandFileName
-    plotStations(QSOs, locator, output_file_name)
+    if STATSMAP:
+        QSOs = compute_dist_az(QSOs, locator)
+        output_file_name = start + '_' + call + '_' + locator + '__' + bandFileName
+
+        plotStations(QSOs, start, locator, bandEDI, output_file_name)
 
 logging.info('Program END')
