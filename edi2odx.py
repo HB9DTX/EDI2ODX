@@ -140,19 +140,19 @@ def select_odx_only(qsos, distance_limit):
     return qsos_dx
 
 
-def generate_xlsx_csv_files(qsos_dx, contest_start, call_sign, wwlocator, traffic_band):
+def generate_xlsx_csv_files(qsos_dx, out_file_suffix):
     # generate output files in xlsx and text files for the QSO's given as input
     # contest start date, callsign and band are used to create "unique" filenames
-    output_file_name = contest_start + '_' + call_sign + '_' + wwlocator + '__' + traffic_band + '_DXs'
+    out_file_suffix = out_file_suffix + '_DXs'
     # double underscore recommended for readability because one might appear in the band as decimal point (1_3GHz)
     if INCLUDEMODECOLUMN:
-        output_file_name = output_file_name + '_with_mode'
+        out_file_suffix = out_file_suffix + '_with_mode'
 
-    csv_filename = output_file_name + '.txt'
+    csv_filename = out_file_suffix + '.txt'
     logging.debug(csv_filename)
     qsos_dx.to_csv(csv_filename, index=False, sep='\t')
 
-    excel_file_name = output_file_name + '.xlsx'
+    excel_file_name = out_file_suffix + '.xlsx'
     logging.debug(excel_file_name)
     qsos_dx.to_excel(excel_file_name, index=False)  # maybe requires installing XlsxWriter package?
     return
@@ -186,7 +186,7 @@ def compute_dist_az(df, myLocator):
     return(df)
 
 
-def plotStations(df, contest_start, myLocator, band, output_file_name):
+def plotStations(df, contest_start, myLocator, band, out_file_suffix):
     # Histogram of azimuths
     fig1, ax1 = plt.subplots()
     #ax1 = fig1.add_subplot(2,1,1)
@@ -203,7 +203,7 @@ def plotStations(df, contest_start, myLocator, band, output_file_name):
     annotation = 'Plot: EDI2ODX by HB9DTX'
     ax1.text(0.05, 0.0, annotation, transform=fig1.transFigure, fontsize='xx-small', color='black', ha='left',
              va='bottom')  # transform=ax1.transAxes, =fig1.transFigure
-    plt.savefig(output_file_name + '_Azimuth' + '.png')
+    plt.savefig(out_file_suffix + '_Azimuth' + '.png')
     # plt.show()
     plt.close()
 
@@ -223,7 +223,7 @@ def plotStations(df, contest_start, myLocator, band, output_file_name):
     annotation = 'Plot: EDI2ODX by HB9DTX'
     ax2.text(0.05, 0, annotation, fontsize='xx-small', color='black', transform=fig1.transFigure, ha='left',
              va='bottom')
-    plt.savefig(output_file_name + '_Points' + '.png')
+    plt.savefig(out_file_suffix + '_Points' + '.png')
     # plt.show()
     plt.close()
 
@@ -260,7 +260,7 @@ def plotStations(df, contest_start, myLocator, band, output_file_name):
     ax3.text(0, 0, annotation, fontsize='xx-small',color='blue',transform=ax3.transAxes, ha='left', va='bottom')#,
              #bbox=dict(boxstyle='square', facecolor='white'))
     #plt.savefig(logFolder + '/' + contestName + '/_StationsLocations_' + myLocator + '_' + band + '.png',bbox_inches='tight')
-    plt.savefig(output_file_name + '_Map' + '.png',bbox_inches='tight')
+    plt.savefig(out_file_suffix + '_Map' + '.png',bbox_inches='tight')
     #plt.show()
     plt.close()
 
@@ -281,14 +281,13 @@ logging.info('EDI files to process: %s', file_list)
 for file in file_list:
     logging.info('Processing %s', file)
     [QSOs, start, call, locator, bandEDI, bandFileName] = read_edi_file(file)    # read one EDI file
+    output_file_name_prefix = start + '_' + call + '_' + locator + '__' + bandFileName
     logging.debug(QSOs)
     QSOs_DX = select_odx_only(QSOs, ODX[bandEDI])                       # select best DX's
     logging.debug(QSOs_DX)
-    generate_xlsx_csv_files(QSOs_DX, start, call, locator, bandFileName)         # generate output files
+    generate_xlsx_csv_files(QSOs_DX, output_file_name_prefix)         # generate output files
     if STATSMAP:
         QSOs = compute_dist_az(QSOs, locator)
-        output_file_name = start + '_' + call + '_' + locator + '__' + bandFileName
-
-        plotStations(QSOs, start, locator, bandEDI, output_file_name)
+        plotStations(QSOs, start, locator, bandEDI, output_file_name_prefix)
 
 logging.info('Program END')
