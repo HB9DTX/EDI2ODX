@@ -1,20 +1,35 @@
 #!/usr/bin/env python3
 # Written by Yves OESCH / HB9DTX / http://www.yvesoesch.ch
 # Project hosted on https://github.com/HB9DTX/EDI2ODX
+# Documentation in README.md
+
 import pandas as pd  # sudo apt-get install python3-pandas
 import logging
 import os
+
+import maiden       # in local folder
 
 # following imports are only needed for statistics and mapping
 import numpy as np
 import matplotlib.pyplot as plt
 import math
 import geotiler     # as package, usage: https://wrobell.dcmod.org/geotiler/usage.html
-import maiden       # in local folder
 
 
 #################################################################################################
-# This dictionary sets the distance limits in km to select the interesting QSO's (per band)
+# This section contains setting that might be altered by the user if needed
+
+# INCLUDEMODECOLUMN = True      # True to include a transmission mode (SSB/CW) column in the generated file
+# INCLUDEMODECOLUMN = False      # True to include a transmission mode (SSB/CW) column in the generated file
+# Unclear now whether DUBUS prefers this 'MOD' column to be added or not
+
+SORTBYQRB = False               # If True: Sorts the ODX from longest QRB to smallest. False= chronological
+
+STATSMAP = True             # if True compute the azimuth/elevation stats and plot a map with all contacted stations
+
+MAP_BBOX = (-10.0, 40.0, 30.0, 58.0)  # Map limits; lower left, upper right, (long, lat) #central europe
+
+# ODX dictionary sets the distance limits in km to select the interesting QSO's (per band)
 # band identifier according to EDI format spec for PBand argument.
 # it can be edited if the min QSO distance to report are to be changed
 # it can be extended it other bands are of interest
@@ -24,18 +39,18 @@ ODX = {'50 MHz': 1000,
        '1,3 GHz': 400,
        '2,3 GHz': 300}
 
-INCLUDEMODECOLUMN = True      # True to include a transmission mode (SSB/CW) column in the generated file
-# INCLUDEMODECOLUMN = False      # True to include a transmission mode (SSB/CW) column in the generated file
-# Unclear now whether DUBUS prefers this 'MOD' column to be added or not
-
-SORTBYQRB = True               # If True: Sorts the ODX from longest QRB to smallest. False= chronological
-
-STATSMAP = True             # if True compute the azimuth/elevation stats and plot a map with all contacted stations
+# WAVELENGTHS is used because the first line in the output txt file contains the band not the QRG
+WAVELENGTHS = {'50 MHz': '6 m',
+               '144 MHz': '2 m',
+               '432 MHz': '70 cm',
+               '1,3 GHz': '23 cm',
+               '2,3 GHz': '13 cm'}
 #################################################################################################
-ODX['435 MHz'] = ODX['432 MHz']
 # Unfortunately 432 or 435 MHz exist both as band definition (Wintest versus N1MM!)
-# OK1KKW and DARC definition of PBand also differ...therefore the entry is copied in the dictionary
-# it might be necessary to do the same for other bands if needed.
+# OK1KKW and DARC definition of PBand also differ...therefore the entries are copied in the dictionaries
+# it might be necessary to do the same for other bands if needed (not tested yet ...)
+ODX['435 MHz'] = ODX['432 MHz']
+WAVELENGTHS['435 MHz'] = WAVELENGTHS['432 MHz']
 
 logging.basicConfig(level=logging.INFO)
 
@@ -119,11 +134,11 @@ def select_odx_only(qsos, distance_limit):
     qsos_dx['QRB'] = qsos_dx['QRB'].astype(str) + ' km'
     # to match DUBUS publication
 
-    if INCLUDEMODECOLUMN:
-        # replace the 'MODE' column at EDI format by a 'MOD' with only 's' (SSB) or 'c' (CW) as seen in recent DUBUS
-        # as place it at the end of the dataframe
-        qsos_dx['MOD'] = ['c' if x == 2 else 's' if x == 1 else '' for x in qsos_dx['MODE']]
-        logging.debug(qsos_dx['MOD'])
+#    if INCLUDEMODECOLUMN:
+    # replace the 'MODE' column at EDI format by a 'MOD' with only 's' (SSB) or 'c' (CW) as seen in recent DUBUS
+    # as place it at the end of the dataframe
+    qsos_dx['MOD'] = ['c' if x == 2 else 's' if x == 1 else '' for x in qsos_dx['MODE']]
+    logging.debug(qsos_dx['MOD'])
     qsos_dx.drop(columns=['MODE'], inplace=True)
 
     if SORTBYQRB:
@@ -142,16 +157,21 @@ def generate_xlsx_csv_files(qsos_dx, out_file_suffix):
     # contest start date, callsign and band are used to create "unique" filenames
     out_file_suffix = out_file_suffix + '_DXs'
     # double underscore recommended for readability because one might appear in the band as decimal point (1_3GHz)
-    if INCLUDEMODECOLUMN:
-        out_file_suffix = out_file_suffix + '_with_mode'
+    # if INCLUDEMODECOLUMN:
+    #   out_file_suffix = out_file_suffix + '_with_mode'
 
     csv_filename = out_file_suffix + '.txt'
+    outfile = open(csv_filename, 'w')
+    outfile.write(call + ' (' + locator + ') wkd ' + WAVELENGTHS[bandEDI] + ':\n')
+    outfile.write('DATE\tTIME\tCALL\tLOCATOR\tQRB/MOD\n')   # no time between QSB and MOD ==> manual header write
+    outfile.close()
     logging.debug(csv_filename)
-    qsos_dx.to_csv(csv_filename, index=False, sep='\t')
+    qsos_dx.to_csv(csv_filename, index=False, header=False, sep='\t', mode='a')
 
-    excel_file_name = out_file_suffix + '.xlsx'
-    logging.debug(excel_file_name)
-    qsos_dx.to_excel(excel_file_name, index=False)  # maybe requires installing XlsxWriter package?
+    # In case excel log is needed, uncomment the lines below
+    # excel_file_name = out_file_suffix + '.xlsx'
+    # logging.debug(excel_file_name)
+    # qsos_dx.to_excel(excel_file_name, index=False)  # maybe requires installing XlsxWriter package?
     return
 
 
@@ -224,11 +244,8 @@ def plotstations(df, contest_start, mylocator, band, out_file_suffix):
     plt.close()
 
     # Geographical map of stations
-    map_bbox = (-10.0, 40.0, 30.0, 58.0)  # lower left, upper right, (long, lat) #central europe
-    mm = geotiler.Map(extent=map_bbox, zoom=5)
+    mm = geotiler.Map(extent=MAP_BBOX, zoom=5)
     img = geotiler.render_map(mm)
-    # print(df)
-    # print(df[['Call', 'longitude', 'latitude']])
 
     points = list(zip(df['LONGITUDE'], df['LATITUDE']))
     x, y = zip(*(mm.rev_geocode(p) for p in points))
@@ -263,7 +280,7 @@ def plotstations(df, contest_start, mylocator, band, out_file_suffix):
 ##############################################################################################
 logging.info('Program START')
 logging.info('Distance limits to select the QSOs, per band: %s', ODX)
-logging.info('MOD column added: %s', INCLUDEMODECOLUMN)
+# logging.info('MOD column added: %s', INCLUDEMODECOLUMN)
 
 file_list = []                                      # list all EDI files in the local folder
 for file in os.listdir():

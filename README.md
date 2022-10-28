@@ -10,7 +10,7 @@ This script extracts the longest distance QSO's from EDI files and generates .xl
 
 >*Preferred formatting of your report (either TXT or EXCEL) is:*
 > 
->*DATE TIME CALL LOCATOR QRB REMARK*
+>*DATE TIME CALL LOCATOR QRB/MOD REMARK*
 >
 >*DATE in format YYYY-MM-DD*
 > 
@@ -20,9 +20,8 @@ This script extracts the longest distance QSO's from EDI files and generates .xl
 > 
 >*In case of TXT use TAB as separator.* 
 
-an option is provided to indicate the mode (SSB or CW only) as an additional column
 
-It also generates statistics on the QSOs:
+If wanted, it can also generate statistics on the QSOs:
 - Density probability of the QSO amount over azimuth
 - Density probability of the QSB over azimuth
 - Display all the contacted station on a map
@@ -30,7 +29,12 @@ It also generates statistics on the QSOs:
 # Installation
 1. Clone the project   
 `git clone https://github.com/HB9DTX/EDI2ODX.git` or simply copy "edi2odx.py" locally
-2. Install the *python3-pandas* library if needed
+2. Install the following library if needed:
+   - *python3-pandas*
+   - *numpy*
+   - *matplotlib*
+   - *math*
+   - *geotiler*
 
 # Usage
 1. Copy one or more EDI file in the current directory
