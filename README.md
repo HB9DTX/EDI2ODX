@@ -18,10 +18,12 @@ This script extracts the longest distance QSO's from EDI files and generates .xl
 > 
 >*QRB in format xxx km*
 > 
+> *MOD: c for CW, s for SSB, 8 for FT8*
+> 
 >*In case of TXT use TAB as separator.* 
 
 
-If wanted, it can also generate statistics on the QSOs:
+If wanted, the script can also generate statistics on the QSOs:
 - Density probability of the QSO amount over azimuth
 - Density probability of the QSB over azimuth
 - Display all the contacted station on a map
@@ -29,7 +31,7 @@ If wanted, it can also generate statistics on the QSOs:
 # Installation
 1. Clone the project   
 `git clone https://github.com/HB9DTX/EDI2ODX.git` or simply copy "edi2odx.py" locally
-2. Install the following library if needed:
+2. Install the following python packages if not already installed:
    - *python3-pandas*
    - *numpy*
    - *matplotlib*
@@ -39,9 +41,9 @@ If wanted, it can also generate statistics on the QSOs:
 # Usage
 1. Copy one or more EDI file in the current directory
 2. (Optional: edit the distance limits for selecting the QSO on the different bands in the first lines of the script)
-3. (Optional: select whether the 'MODE' column should be added or not)
+3. (Optional: select whether statistics and map are to be generated)
 4. Run the script
-5. Best DXs files are generated in the local directory. The generated file name contains the contest start date, the call and the band as stated in the EDI file (ex: 20221001_HB9XC__432MHz_DXs). .xlsx and .txt are both available
+5. Best DXs files are generated in the local directory. The generated file name contains the contest start date, the call and the band as stated in the EDI file (ex: 20221001_HB9XC__432MHz_DXs.txt).
 
 
 # References
