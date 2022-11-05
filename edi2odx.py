@@ -24,8 +24,9 @@ import geotiler     # as package, usage: https://wrobell.dcmod.org/geotiler/usag
 # Unclear now whether DUBUS prefers this 'MOD' column to be added or not
 
 SORTBYQRB = False               # If True: Sorts the ODX from longest QRB to smallest. False= chronological
+                                #DUBUS recommendation: False
 
-STATSMAP = True             # if True compute the azimuth/elevation stats and plot a map with all contacted stations
+STATSMAP = True                 # if True compute the azimuth/elevation stats and plot a map with all contacted stations
 
 MAP_BBOX = (-10.0, 40.0, 30.0, 58.0)  # Map limits; lower left, upper right, (long, lat) #central europe
 
@@ -39,7 +40,7 @@ ODX = {'50 MHz': 1000,
        '1,3 GHz': 400,
        '2,3 GHz': 300}
 
-# WAVELENGTHS is used because the first line in the output txt file contains the band not the QRG
+# WAVELENGTHS is used because the first line in the output txt file must contain the band not the QRG
 WAVELENGTHS = {'50 MHz': '6 m',
                '144 MHz': '2 m',
                '432 MHz': '70 cm',
