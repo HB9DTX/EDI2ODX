@@ -19,10 +19,6 @@ import geotiler     # as package, usage: https://wrobell.dcmod.org/geotiler/usag
 #################################################################################################
 # This section contains setting that might be altered by the user if needed
 
-# INCLUDEMODECOLUMN = True      # True to include a transmission mode (SSB/CW) column in the generated file
-# INCLUDEMODECOLUMN = False      # True to include a transmission mode (SSB/CW) column in the generated file
-# Unclear now whether DUBUS prefers this 'MOD' column to be added or not
-
 SORTBYQRB = False               # If True: Sorts the ODX from longest QRB to smallest. False= chronological
                                 #DUBUS recommendation: False
 
@@ -135,9 +131,6 @@ def select_odx_only(qsos, distance_limit):
     qsos_dx['QRB'] = qsos_dx['QRB'].astype(str) + ' km'
     # to match DUBUS publication
 
-#    if INCLUDEMODECOLUMN:
-    # replace the 'MODE' column at EDI format by a 'MOD' with only 's' (SSB) or 'c' (CW) as seen in recent DUBUS
-    # as place it at the end of the dataframe
     qsos_dx['MOD'] = ['c' if x == 2 else 's' if x == 1 else '' for x in qsos_dx['MODE']]
     logging.debug(qsos_dx['MOD'])
     qsos_dx.drop(columns=['MODE'], inplace=True)
