@@ -15,16 +15,15 @@ import matplotlib.pyplot as plt
 import math
 import geotiler     # as package, usage: https://wrobell.dcmod.org/geotiler/usage.html
 
-
 #################################################################################################
-# This section contains setting that might be altered by the user if needed
+# This section contains settings as global variables that might be altered by the user if needed
 
 SORTBYQRB = False               # If True: Sorts the ODX from longest QRB to smallest. False= chronological
-                                #DUBUS recommendation: False
+                                # DUBUS recommendation: False
 
 STATSMAP = True                 # if True compute the azimuth/elevation stats and plot a map with all contacted stations
 
-MAP_BBOX = (-10.0, 40.0, 30.0, 58.0)  # Map limits; lower left, upper right, (long, lat) #central europe
+MAP_BBOX = (-10.0, 40.0, 30.0, 58.0)  # Map limits; lower left, upper right, (long, lat) # central europe
 
 # ODX dictionary sets the distance limits in km to select the interesting QSO's (per band)
 # band identifier according to EDI format spec for PBand argument.
@@ -52,47 +51,57 @@ WAVELENGTHS['435 MHz'] = WAVELENGTHS['432 MHz']
 logging.basicConfig(level=logging.INFO)
 
 
-def read_edi_file(filename):
-    # Read one EDI file and returns:
-    # qsos_list: dataframe containing all the QSO of the EDI file
-    # contest_start: String describing the contest start date YYYYMMDD
-    # call_sign: station callsign
-    # band_edi: operating band, according to EDI specification
-    # band_file_name: operating band, with space and comma replaced by underscore, for usage as file name
-    contest_start = 'YYYYMMDD'  # Just in case those arguments would be empty in the EDI file
-    call_sign = 'CALLSIGN'
-    band_edi = 'BAND'
-    band_file_name = 'BAND'
-    wwlocator = 'LOCATOR'
+class Contest:
+    # Objects of this class contain all the information for a given contest log
+    def __init__(self):
+        self.start = None               # contest start time
+        self.locator = None             # locator of the contest station
+        self.call = None                # callsign of the contest station
+        self.bandEDI = None             # contest operating band in EDI format
+        self.bandFileName = None        # operating band without underscores
+        self.outputFilePrefix = None    # common prefix of the output files
+        self.qsoList = None             # contains the whole contest log with all columns
+        self.qsoDx = None               # best DXs only, with limited columns for DUBUS report
+
+
+def read_edi_file(filename, contest):
+    # Read one EDI file and fills all the attributes of the contest object
+
+    contest.start = 'YYYYMMDD'  # Just in case those arguments would be empty in the EDI file
+    contest.call = 'CALLSIGN'
+    contest.bandEDI = 'BAND'
+    contest.bandFileName = 'BAND'
+    contest.locator = 'LOCATOR'
 
     with open(filename, 'r', encoding="utf-8", errors="ignore") as ediFile:
         # start by parsing the header ([REG1TEST;1] section of the file to extract start date, call and band
         # https://stackoverflow.com/questions/63596329/python-pandas-read-csv-with-commented-header-line
         for line in ediFile:
             if line.startswith('TDate='):
-                logging.debug('contest start time found')
-                contest_start = line[6:14]
+                contest.start = line[6:14]
+                logging.info('contest start time found: %s', contest.start)
 
             if line.startswith('PCall='):
                 logging.debug('call found')
                 logging.debug(line)
-                call_sign = line[6:-1]
-                logging.info('The station call sign is: %s', call_sign)
+                contest.call = line[6:-1]
+                logging.info('The station call sign is: %s', contest.call)
 
             if line.startswith('PWWLo='):
                 logging.debug('locator found')
                 logging.debug(line)
-                wwlocator = line[6:-1]
-                logging.info('The station locator is: %s', wwlocator)
+                contest.locator = line[6:-1]
+                logging.info('The station locator is: %s', contest.locator)
 
             if line.startswith('PBand='):
                 logging.debug('Band found')
                 logging.debug(line)
                 traffic_band = line[6:-1]
-                band_edi = traffic_band  # To be used for selecting the ODX distance in dictionary
+                contest.bandEDI = traffic_band  # To be used for selecting the ODX distance in dictionary
                 band_file_name = traffic_band.replace(' ', '')  # To be used in the filenames (no space, no comma)
                 band_file_name = band_file_name.replace(',', '_')
-                logging.info('The operating band is: %s', band_edi)
+                contest.bandFileName = band_file_name
+                logging.info('The operating band is: %s', contest.bandEDI)
 
             if line.startswith('[QSORecords'):
                 logging.debug('QSO log starts here')
@@ -105,18 +114,24 @@ def read_edi_file(filename):
                              'N_EXCH', 'N_LOCATOR', 'N_DXCC', 'DUPE']
         # Column names matching EDI file format specification
 
+    contest.qsoList = qsos_list
+    contest.outputFilePrefix = current_contest.start + '_' + current_contest.call + '_'\
+        + current_contest.locator + '__' + current_contest.bandFileName
+    # contest start date, callsign and band are used to create "unique" filenames
     ediFile.close()
-    return qsos_list, contest_start, call_sign, wwlocator, band_edi, band_file_name
+    return contest
 
 
-def select_odx_only(qsos, distance_limit):
-    # returns a dataframe containing only the interesting QSO's of a given log file
+def select_odx_only(contest, distance_limit):
+    # Fills the contest attribute .qsoDX containing only the interesting QSO's of a given log file
     # i.e. the ones with distance exceeding a value given as parameter
-    # filters out the columns of interest for the DUBUS report, removes the others
-    qsos_dx = qsos[qsos['QRB'] >= distance_limit].copy()  # .copy needed to avoid SettingWithCopyWarning
+    # keeps only the columns of interest for the DUBUS report, removes the others
+
+    qsos_dx = contest.qsoList[contest.qsoList['QRB'] >= distance_limit].copy()
+    # .copy needed to avoid SettingWithCopyWarning
     logging.debug(qsos_dx)
 
-    # removes unusefull columns, keeps DATE, TIME, CALL, MODE, LOCATOR and QRB only
+    # removes unuseful columns, keeps DATE, TIME, CALL, MODE, LOCATOR and QRB only
     qsos_dx.drop(columns=['SENT_NR', 'SENT_RST', 'RECEIVED_RST', 'RECEIVED_NUMBER',
                           'EXCHANGE', 'N_EXCH', 'N_LOCATOR', 'N_DXCC', 'DUPE'], inplace=True)
 
@@ -129,54 +144,53 @@ def select_odx_only(qsos, distance_limit):
     # TIME conversion to format expected by DUBUS
 
     qsos_dx['QRB'] = qsos_dx['QRB'].astype(str) + ' km'
-    # to match DUBUS publication
+    # add the km unit to match DUBUS publication
 
     qsos_dx['MOD'] = ['c' if x == 2 else 's' if x == 1 else '' for x in qsos_dx['MODE']]
     logging.debug(qsos_dx['MOD'])
     qsos_dx.drop(columns=['MODE'], inplace=True)
+    # Replace the MODE column which contains integers by a new column MOD
+    # which contains a single letter indicating CW or SSB
 
     if SORTBYQRB:
         qsos_dx.sort_values(by=['QRB', 'DATE', 'TIME'], ascending=[False, True, True], inplace=True)
-        # Date and time sorting as 2nd/3rd priority, otherwise log order is random for QSO with same QRB
+        # Optional sorting by descending QSO distances
+        # Date and time sorting as 2nd/3rd priority, otherwise log order would be random for QSO with same QRB
 
     nr_qso_dx = qsos_dx.shape[0]
-    logging.debug(nr_qso_dx)
     logging.info('%s QSOs with distance over %s km:', nr_qso_dx, distance_limit)
     logging.debug(qsos_dx)
-    return qsos_dx
+    contest.qsoDx = qsos_dx
+    return contest
 
 
-def generate_xlsx_csv_files(qsos_dx, out_file_suffix):
-    # generate output files in xlsx and text files for the QSO's given as input
-    # contest start date, callsign and band are used to create "unique" filenames
-    out_file_suffix = out_file_suffix + '_DXs'
-    # double underscore recommended for readability because one might appear in the band as decimal point (1_3GHz)
-    # if INCLUDEMODECOLUMN:
-    #   out_file_suffix = out_file_suffix + '_with_mode'
-
-    csv_filename = out_file_suffix + '.txt'
+def generate_xlsx_csv_files(contest):
+    # generate output files in text files for the best DX QSO's of the contest provided as argument
+    csv_filename = contest.outputFilePrefix + '_DXs.txt'
     outfile = open(csv_filename, 'w')
-    outfile.write(call + ' (' + locator + ') wkd ' + WAVELENGTHS[bandEDI] + ':\n')
+    outfile.write(contest.call + ' (' + contest.locator + ') wkd ' + WAVELENGTHS[contest.bandEDI] + ':\n')
     outfile.write('DATE\tTIME\tCALL\tLOCATOR\tQRB/MOD\n')   # no time between QSB and MOD ==> manual header write
     outfile.close()
     logging.debug(csv_filename)
-    qsos_dx.to_csv(csv_filename, index=False, header=False, sep='\t', mode='a')
+    contest.qsoDx.to_csv(csv_filename, index=False, header=False, sep='\t', mode='a')
 
     # In case excel log is needed, uncomment the lines below
-    # excel_file_name = out_file_suffix + '.xlsx'
+    # excel_file_name = contest.outputFilePrefix + '_DXs.xlsx'
     # logging.debug(excel_file_name)
-    # qsos_dx.to_excel(excel_file_name, index=False)  # maybe requires installing XlsxWriter package?
+    # contest.qsoDx.to_excel(excel_file_name, index=False)  # maybe requires installing XlsxWriter package?
     return
 
 
-def compute_dist_az(df, mylocator):
+def compute_dist_az(contest):
+    # Computes distance and azimuth from contest station to all stations in the log.
+    # Creates additional columns in contest.qsoList dataframe
     mhl = maiden.Maiden()
-    mylatlong = mhl.maiden2latlon(mylocator)
-    distances = np.zeros(df.shape[0])
-    azimuths = np.zeros(df.shape[0])
-    latitudes = np.zeros(df.shape[0])
-    longitudes = np.zeros(df.shape[0])
-    for index, contents in df.iterrows():
+    mylatlong = mhl.maiden2latlon(contest.locator)
+    distances = np.zeros(contest.qsoList.shape[0])
+    azimuths = np.zeros(contest.qsoList.shape[0])
+    latitudes = np.zeros(contest.qsoList.shape[0])
+    longitudes = np.zeros(contest.qsoList.shape[0])
+    for index, contents in contest.qsoList.iterrows():
         logging.debug(index, contents['LOCATOR'])
         stationlatlong = mhl.maiden2latlon(contents['LOCATOR'])
         if stationlatlong[0] is not None:  # a voids error if locator is not valid
@@ -188,52 +202,55 @@ def compute_dist_az(df, mylocator):
             (distances[index], azimuths[index]) = (0, 0)
             latitudes[index] = mylatlong[0]
             longitudes[index] = mylatlong[1]
-    df['DISTANCE2'] = distances
-    df['AZIMUTH'] = azimuths
-    df['LATITUDE'] = latitudes
-    df['LONGITUDE'] = longitudes
-    logging.debug(df[['CALL', 'AZIMUTH', 'QRB', 'DISTANCE2']])
-    # print(type(df['Pts'][1]))
-    # print(type(df['Distance2'][1]))
-    return df
+    contest.qsoList['DISTANCE2'] = distances
+    contest.qsoList['AZIMUTH'] = azimuths
+    contest.qsoList['LATITUDE'] = latitudes
+    contest.qsoList['LONGITUDE'] = longitudes
+    logging.debug(contest.qsoList[['CALL', 'AZIMUTH', 'QRB', 'DISTANCE2']])
+    return contest
 
 
-def plotstations(df, contest_start, mylocator, band, out_file_suffix):
-    # Histogram of azimuths
+def plotstations(contest):
+    # Plot contest statistics:
+    # - histogram of azimuths
+    # - histogram of distances to other stations
+    # - map al all contest stations in log
+
+    # Azimuths probability density plot
     fig1, ax1 = plt.subplots()
-    ax1.set_title('Azimuth density probability computed from ' + mylocator +
-                  '\nContest ' + contest_start + '; Call ' + call + '; Band ' + band)
-    ax1.hist(df['AZIMUTH'], bins=int(math.sqrt(df.shape[0])))
+    ax1.set_title('Azimuth density probability computed from ' + contest.locator +
+                  '\nContest ' + contest.start + '; Call ' + contest.call + '; Band ' + contest.bandEDI)
+    ax1.hist(contest.qsoList['AZIMUTH'], bins=int(math.sqrt(contest.qsoList.shape[0])))
     ax1.set_xlabel('Azimuth')
     ax1.set_ylabel('Number of QSO')
     ax1.set_xlim([0, 360])
-
-    annotation = 'Total number of QSO in log: ' + str(df.shape[0])
+    annotation = 'Total number of QSO in log: ' + str(contest.qsoList.shape[0])
     ax1.text(0.5, 0.95, annotation, transform=ax1.transAxes, ha='center', va='top',
              bbox=dict(boxstyle='square', facecolor='None'))
     annotation = 'Plot: EDI2ODX by HB9DTX'
     ax1.text(0.05, 0.0, annotation, transform=fig1.transFigure, fontsize='xx-small', color='black', ha='left',
              va='bottom')  # transform=ax1.transAxes, =fig1.transFigure
-    plt.savefig(out_file_suffix + '_Azimuth' + '.png')
+    plt.savefig(contest.outputFilePrefix + '_Azimuth' + '.png')
     # plt.show()
     plt.close()
 
     # Histogram of Points (Distances)
     fig2, ax2 = plt.subplots()
-    ax2.set_title('Distances density probability computed from ' + mylocator +
-                  '\nContest ' + contest_start + '; Call ' + call + '; Band ' + band)
-    ax2.hist(df['AZIMUTH'], bins=int(math.sqrt(df.shape[0])), weights=df['DISTANCE2'])
+    ax2.set_title('Distances density probability computed from ' + contest.locator +
+                  '\nContest ' + contest.start + '; Call ' + contest.call + '; Band ' + contest.bandEDI)
+    ax2.hist(contest.qsoList['AZIMUTH'], bins=int(math.sqrt(contest.qsoList.shape[0])),
+             weights=contest.qsoList['DISTANCE2'])
     ax2.set_xlabel('Azimuth')
     ax2.set_ylabel('Number of points (km)')
     ax2.set_xlim([0, 360])
-    annotation = 'Total number of QSO in log: ' + str(df.shape[0]) + '\nTotal km: '+str(round(df['QRB'].sum()))
+    annotation = 'Total number of QSO in log: ' + str(contest.qsoList.shape[0]) + '\nTotal km: '\
+                 + str(round(contest.qsoList['QRB'].sum()))
     ax2.text(0.5, 0.95, annotation, transform=ax2.transAxes, ha='center', va='top',
              bbox=dict(boxstyle='square', facecolor='None'))
-
     annotation = 'Plot: EDI2ODX by HB9DTX'
     ax2.text(0.05, 0, annotation, fontsize='xx-small', color='black', transform=fig1.transFigure, ha='left',
              va='bottom')
-    plt.savefig(out_file_suffix + '_Points' + '.png')
+    plt.savefig(contest.outputFilePrefix + '_Points' + '.png')
     # plt.show()
     plt.close()
 
@@ -241,11 +258,11 @@ def plotstations(df, contest_start, mylocator, band, out_file_suffix):
     mm = geotiler.Map(extent=MAP_BBOX, zoom=5)
     img = geotiler.render_map(mm)
 
-    points = list(zip(df['LONGITUDE'], df['LATITUDE']))
+    points = list(zip(contest.qsoList['LONGITUDE'], contest.qsoList['LATITUDE']))
     x, y = zip(*(mm.rev_geocode(p) for p in points))
 
     mhl = maiden.Maiden()
-    mylatlong = mhl.maiden2latlon(mylocator)
+    mylatlong = mhl.maiden2latlon(contest.locator)
     mylatlong = (mylatlong[1], mylatlong[0])
     mx, my = mm.rev_geocode(mylatlong)
 
@@ -253,18 +270,16 @@ def plotstations(df, contest_start, mylocator, band, out_file_suffix):
     ax3.imshow(img)
     ax3.scatter(x, y, c='purple', edgecolor='none', s=10, alpha=0.9, label='all stations')
     ax3.scatter(mx, my, c='red', edgecolor='none', s=50, alpha=0.9, label='My station')
-    ax3.set_title('Stations positions for contest ' + contest_start +
-                  '\nCall ' + call + '; Band ' + band)
+    ax3.set_title('Stations positions for contest ' + contest.start +
+                  '\nCall ' + contest.call + '; Band ' + contest.bandEDI)
     plt.axis('off')
-
-    annotation = 'Total number of stations in log: ' + str(df.shape[0])
+    annotation = 'Total number of stations in log: ' + str(contest.qsoList.shape[0])
     ax3.text(1, 0, annotation, transform=ax3.transAxes, ha='right', va='bottom',
              bbox=dict(boxstyle='square', facecolor='white'))
-
     annotation = 'Plot: EDI2ODX by HB9DTX\nMap data: OpenStreetMap.'
     ax3.text(0, 0, annotation, fontsize='xx-small', color='blue', transform=ax3.transAxes, ha='left', va='bottom')
     # bbox=dict(boxstyle='square', facecolor='white'))
-    plt.savefig(out_file_suffix + '_Map' + '.png', bbox_inches='tight')
+    plt.savefig(contest.outputFilePrefix + '_Map' + '.png', bbox_inches='tight')
     # plt.show()
     plt.close()
 
@@ -274,7 +289,6 @@ def plotstations(df, contest_start, mylocator, band, out_file_suffix):
 ##############################################################################################
 logging.info('Program START')
 logging.info('Distance limits to select the QSOs, per band: %s', ODX)
-# logging.info('MOD column added: %s', INCLUDEMODECOLUMN)
 
 file_list = []                                      # list all EDI files in the local folder
 for file in os.listdir():
@@ -282,17 +296,24 @@ for file in os.listdir():
         file_list.append(file)
 logging.info('EDI files to process: %s', file_list)
 
-
 for file in file_list:
+    logging.info('-' * 80)
     logging.info('Processing %s', file)
-    [QSOs, start, call, locator, bandEDI, bandFileName] = read_edi_file(file)    # read one EDI file
-    output_file_name_prefix = start + '_' + call + '_' + locator + '__' + bandFileName
-    logging.debug(QSOs)
-    QSOs_DX = select_odx_only(QSOs, ODX[bandEDI])                       # select best DX's
-    logging.debug(QSOs_DX)
-    generate_xlsx_csv_files(QSOs_DX, output_file_name_prefix)         # generate output files
-    if STATSMAP:
-        QSOs = compute_dist_az(QSOs, locator)
-        plotstations(QSOs, start, locator, bandEDI, output_file_name_prefix)
+    current_contest = Contest()
+    read_edi_file(file, current_contest)                                # read one EDI file
+    logging.debug(current_contest)
+    logging.debug(current_contest.start)
+    logging.debug(current_contest.locator)
+    logging.debug(current_contest.qsoList)
+
+    select_odx_only(current_contest, ODX[current_contest.bandEDI])      # select best DX's
+    logging.debug(current_contest.qsoDx)
+
+    generate_xlsx_csv_files(current_contest)                            # generate the txt (and optional xls)
+
+    if STATSMAP:                                                        # generates contest statistics and map
+        compute_dist_az(current_contest)
+        plotstations(current_contest)
+    del current_contest                 # deletes current_contest object after processing
 
 logging.info('Program END')
