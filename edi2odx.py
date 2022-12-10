@@ -2,8 +2,11 @@
 # Written by Yves OESCH / HB9DTX / http://www.yvesoesch.ch
 # Project hosted on https://github.com/HB9DTX/EDI2ODX
 # Documentation in README.md
+#
+# 2022-12-09 de G1OGY: Add MGM mode
+# 2022-12-09 de G1OGY: trap and translate CALL/P
 
-import pandas as pd  # sudo apt-get install python3-pandas
+import pandas as pd  # sudo apt-get install python3-pandas or sudo pip install pandas to reduce 500MB download
 import logging
 import os
 
@@ -33,20 +36,30 @@ ODX = {'50 MHz': 1000,
        '144 MHz': 800,
        '432 MHz': 600,
        '1,3 GHz': 400,
-       '2,3 GHz': 300}
-
+       '2,3 GHz': 300,
+       '3,4 GHz': 200,
+       '5,7 GHz': 150,
+       '10 GHz': 100,
+       '24 GHz': 50}
 # WAVELENGTHS is used because the first line in the output txt file must contain the band not the QRG
 WAVELENGTHS = {'50 MHz': '6 m',
                '144 MHz': '2 m',
                '432 MHz': '70 cm',
                '1,3 GHz': '23 cm',
-               '2,3 GHz': '13 cm'}
+               '2,3 GHz': '13 cm',
+               '3,4 GHz': '9 cm',
+               '5,7 GHz': '6 cm',
+               '10 GHz': '3 cm',
+               '24 GHz': '12mm'}
 #################################################################################################
 # Unfortunately 432 or 435 MHz exist both as band definition (Wintest versus N1MM!)
 # OK1KKW and DARC definition of PBand also differ...therefore the entries are copied in the dictionaries
 # it might be necessary to do the same for other bands if needed (not tested yet ...)
 ODX['435 MHz'] = ODX['432 MHz']
 WAVELENGTHS['435 MHz'] = WAVELENGTHS['432 MHz']
+
+ODX['145 MHz'] = ODX['144 MHz']
+WAVELENGTHS['145 MHz'] = WAVELENGTHS['144 MHz']
 
 logging.basicConfig(level=logging.INFO)
 
@@ -85,6 +98,8 @@ def read_edi_file(filename, contest):
                 logging.debug('call found')
                 logging.debug(line)
                 contest.call = line[6:-1]
+                portable = {47: 45}
+                contest.call = contest.call.translate(portable) #converts '/' into '-' to avoid messing-up the filename
                 logging.info('The station call sign is: %s', contest.call)
 
             if line.startswith('PWWLo='):
@@ -146,11 +161,11 @@ def select_odx_only(contest, distance_limit):
     qsos_dx['QRB'] = qsos_dx['QRB'].astype(str) + ' km'
     # add the km unit to match DUBUS publication
 
-    qsos_dx['MOD'] = ['c' if x == 2 else 's' if x == 1 else '' for x in qsos_dx['MODE']]
+    qsos_dx['MOD'] = ['m' if x == 7 else 'c' if x == 2 else 's' if x == 1 else '' for x in qsos_dx['MODE']]
     logging.debug(qsos_dx['MOD'])
     qsos_dx.drop(columns=['MODE'], inplace=True)
     # Replace the MODE column which contains integers by a new column MOD
-    # which contains a single letter indicating CW or SSB
+    # which contains a single letter indicating MGM, CW or SSB
 
     if SORTBYQRB:
         qsos_dx.sort_values(by=['QRB', 'DATE', 'TIME'], ascending=[False, True, True], inplace=True)
