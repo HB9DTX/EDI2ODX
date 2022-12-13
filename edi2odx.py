@@ -175,7 +175,7 @@ def select_odx_only(contest, distance_limit):
     # add the km unit to match DUBUS publication
 
     qsos_dx['MOD'] = ['m' if x == 7 else 'f' if x == 6 else 'c' if x == 2 else 'c' if x == 4
-    else 's' if x == 1 else 's' if x == 3 else '' for x in qsos_dx['MODE']]
+                      else 's' if x == 1 else 's' if x == 3 else '' for x in qsos_dx['MODE']]
     # Doesn't correspond exactly to BUBUS / DG7FL preferences: "8" for FT-8. No mention of "f" or "m" in DUBUS
     logging.debug(qsos_dx['MOD'])
     qsos_dx.drop(columns=['MODE'], inplace=True)
