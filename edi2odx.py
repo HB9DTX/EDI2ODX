@@ -130,7 +130,7 @@ def read_edi_file(filename, contest):
                 logging.debug('QSO log starts here')
                 break
         # real log of QSO's starts here. The rest of the file is processed as a dataframe using pandas
-        #OGY: Tucnak users should replace the following line with the commented \
+        # OGY: Tucnak users should replace the following line with the commented \
         #     line below it so to ignore the last line IDENT in a Tucnak EDI file \
         #     (or manually delete the IDENT line before processing).
         qsos_list = pd.read_csv(ediFile, delimiter=";", skiprows=1)
@@ -166,7 +166,7 @@ def select_odx_only(contest, distance_limit):
     qsos_dx['DATE'] = qsos_dx['DATE'].dt.strftime('%Y-%m-%d')
     # DATE conversion to format expected by DUBUS
 
-    #qsos_dx['TIME'] = pd.to_datetime(qsos_dx['TIME'], format='%H%M')   #Buggous with QSO right after midnight
+    # qsos_dx['TIME'] = pd.to_datetime(qsos_dx['TIME'], format='%H%M')   #Buggous with QSO right after midnight
     qsos_dx['TIME'] = pd.to_datetime(qsos_dx['TIME'], infer_datetime_format=True)
     qsos_dx['TIME'] = qsos_dx['TIME'].dt.strftime('%H:%M')
     # TIME conversion to format expected by DUBUS
@@ -174,7 +174,9 @@ def select_odx_only(contest, distance_limit):
     qsos_dx['QRB'] = qsos_dx['QRB'].astype(str) + ' km'
     # add the km unit to match DUBUS publication
 
-    qsos_dx['MOD'] = ['m' if x == 7 else 'f' if x == 6 else 'c' if x == 2 else 'c' if x == 4 else 's' if x == 1 else 's' if x == 3 else '' for x in qsos_dx['MODE']]
+    qsos_dx['MOD'] = ['m' if x == 7 else 'f' if x == 6 else 'c' if x == 2 else 'c' if x == 4
+    else 's' if x == 1 else 's' if x == 3 else '' for x in qsos_dx['MODE']]
+    # Doesn't correspond exactly to BUBUS / DG7FL preferences: "8" for FT-8. No mention of "f" or "m" in DUBUS
     logging.debug(qsos_dx['MOD'])
     qsos_dx.drop(columns=['MODE'], inplace=True)
     # Replace the MODE column which contains integers by a new column MOD
