@@ -3,10 +3,15 @@
 # Project hosted on https://github.com/HB9DTX/EDI2ODX
 # Documentation in README.md
 #
-# 2022-12-09 de G1OGY: Add MGM mode
+# 2022-12-09 de G1OGY: Add MGM mode.
+# 2022-12-11 de G1OGY: add FM mode and translate mixed-mode codes into the SENT-mode (codes mandatory for IARU entry)
 # 2022-12-09 de G1OGY: trap and translate CALL/P
+# 2022-12-11 de G1OGY: amend QSO time derivation within `pandas` to provide midnight-crossing capability
+# 2022-12-12 de G1OGY: amend provision for and advice to produce "Excel" DXlog output
+# 2022-12-12 de G1OGY: Tucnak users - see line no. 132 of this file
 
-import pandas as pd  # sudo apt-get install python3-pandas or sudo pip install pandas to reduce 500MB download
+
+import pandas as pd  # sudo apt-get install python3-pandas or `sudo pip install pandas` to reduce 500MB apt(8) download
 import logging
 import os
 
@@ -16,14 +21,15 @@ import maiden       # in local folder
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-import geotiler     # as package, usage: https://wrobell.dcmod.org/geotiler/usage.html
+import geotiler     # as `pip` package, usage: https://wrobell.dcmod.org/geotiler/usage.html
 
 #################################################################################################
 # This section contains settings as global variables that might be altered by the user if needed
 
 SORTBYQRB = False               # If True: Sorts the ODX from longest QRB to smallest. False= chronological
                                 # DUBUS recommendation: False
-
+EXCELOUTPUT = False             # In case excel DXlog is needed, edit False to True
+                                # REQUIRES, minimum, `pip install openpyxl` (290kB)
 STATSMAP = True                 # if True compute the azimuth/elevation stats and plot a map with all contacted stations
 
 MAP_BBOX = (-10.0, 40.0, 30.0, 58.0)  # Map limits; lower left, upper right, (long, lat) # central europe
@@ -50,16 +56,17 @@ WAVELENGTHS = {'50 MHz': '6 m',
                '3,4 GHz': '9 cm',
                '5,7 GHz': '6 cm',
                '10 GHz': '3 cm',
-               '24 GHz': '12mm'}
+               '24 GHz': '12 mm'}
 #################################################################################################
 # Unfortunately 432 or 435 MHz exist both as band definition (Wintest versus N1MM!)
 # OK1KKW and DARC definition of PBand also differ...therefore the entries are copied in the dictionaries
 # it might be necessary to do the same for other bands if needed (not tested yet ...)
-ODX['435 MHz'] = ODX['432 MHz']
-WAVELENGTHS['435 MHz'] = WAVELENGTHS['432 MHz']
-
+#
+# 2022-12-09 de G1OGY: IARU R1 designate band 2 Metres as 145 MHz and 70cm as 435 MHz (as above)
 ODX['145 MHz'] = ODX['144 MHz']
 WAVELENGTHS['145 MHz'] = WAVELENGTHS['144 MHz']
+ODX['435 MHz'] = ODX['432 MHz']
+WAVELENGTHS['435 MHz'] = WAVELENGTHS['432 MHz']
 
 logging.basicConfig(level=logging.INFO)
 
@@ -99,7 +106,8 @@ def read_edi_file(filename, contest):
                 logging.debug(line)
                 contest.call = line[6:-1]
                 portable = {47: 45}
-                contest.call = contest.call.translate(portable) #converts '/' into '-' to avoid messing-up the filename
+                contest.call = contest.call.translate(portable)
+                # Converts '/' into '-' to avoid messing-up the filename
                 logging.info('The station call sign is: %s', contest.call)
 
             if line.startswith('PWWLo='):
@@ -122,7 +130,11 @@ def read_edi_file(filename, contest):
                 logging.debug('QSO log starts here')
                 break
         # real log of QSO's starts here. The rest of the file is processed as a dataframe using pandas
+        #OGY: Tucnak users should replace the following line with the commented \
+        #     line below it so to ignore the last line IDENT in a Tucnak EDI file \
+        #     (or manually delete the IDENT line before processing).
         qsos_list = pd.read_csv(ediFile, delimiter=";", skiprows=1)
+        #qsos_list = pd.read_csv(ediFile, delimiter=";", skiprows=1, skipfooter=1, engine='python')
         qsos_list.columns = ['DATE', 'TIME', 'CALL', 'MODE', 'SENT_RST', 'SENT_NR',
                              'RECEIVED_RST', 'RECEIVED_NUMBER',
                              'EXCHANGE', 'LOCATOR', 'QRB',
@@ -154,18 +166,19 @@ def select_odx_only(contest, distance_limit):
     qsos_dx['DATE'] = qsos_dx['DATE'].dt.strftime('%Y-%m-%d')
     # DATE conversion to format expected by DUBUS
 
-    qsos_dx['TIME'] = pd.to_datetime(qsos_dx['TIME'], format='%H%M')
+    #qsos_dx['TIME'] = pd.to_datetime(qsos_dx['TIME'], format='%H%M')   #Buggous with QSO right after midnight
+    qsos_dx['TIME'] = pd.to_datetime(qsos_dx['TIME'], infer_datetime_format=True)
     qsos_dx['TIME'] = qsos_dx['TIME'].dt.strftime('%H:%M')
     # TIME conversion to format expected by DUBUS
 
     qsos_dx['QRB'] = qsos_dx['QRB'].astype(str) + ' km'
     # add the km unit to match DUBUS publication
 
-    qsos_dx['MOD'] = ['m' if x == 7 else 'c' if x == 2 else 's' if x == 1 else '' for x in qsos_dx['MODE']]
+    qsos_dx['MOD'] = ['m' if x == 7 else 'f' if x == 6 else 'c' if x == 2 else 'c' if x == 4 else 's' if x == 1 else 's' if x == 3 else '' for x in qsos_dx['MODE']]
     logging.debug(qsos_dx['MOD'])
     qsos_dx.drop(columns=['MODE'], inplace=True)
     # Replace the MODE column which contains integers by a new column MOD
-    # which contains a single letter indicating MGM, CW or SSB
+    # which contains a single letter indicating FM, MGM, CW or SSB (sent mode)
 
     if SORTBYQRB:
         qsos_dx.sort_values(by=['QRB', 'DATE', 'TIME'], ascending=[False, True, True], inplace=True)
@@ -189,10 +202,10 @@ def generate_xlsx_csv_files(contest):
     logging.debug(csv_filename)
     contest.qsoDx.to_csv(csv_filename, index=False, header=False, sep='\t', mode='a')
 
-    # In case excel log is needed, uncomment the lines below
-    # excel_file_name = contest.outputFilePrefix + '_DXs.xlsx'
-    # logging.debug(excel_file_name)
-    # contest.qsoDx.to_excel(excel_file_name, index=False)  # maybe requires installing XlsxWriter package?
+    if EXCELOUTPUT:
+        excel_file_name = contest.outputFilePrefix + '_DXs.xlsx'
+        logging.debug(excel_file_name)
+        contest.qsoDx.to_excel(excel_file_name, index=False)
     return
 
 
@@ -206,9 +219,9 @@ def compute_dist_az(contest):
     latitudes = np.zeros(contest.qsoList.shape[0])
     longitudes = np.zeros(contest.qsoList.shape[0])
     for index, contents in contest.qsoList.iterrows():
-        logging.debug(index, contents['LOCATOR'])
+        # OGY: logging.debug(index, contents['LOCATOR'])      # This log directive causes '--- Logging error ---' print
         stationlatlong = mhl.maiden2latlon(contents['LOCATOR'])
-        if stationlatlong[0] is not None:  # a voids error if locator is not valid
+        if stationlatlong[0] is not None:  # avoids error if locator is not valid
             (distances[index], azimuths[index]) = mhl.dist_az(mylatlong, stationlatlong)
             latitudes[index] = stationlatlong[0]
             longitudes[index] = stationlatlong[1]
