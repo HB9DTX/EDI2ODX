@@ -30,13 +30,14 @@ If wanted, the script can also generate statistics on the QSOs:
 
 # Installation
 1. Clone the project   
-`git clone https://github.com/HB9DTX/EDI2ODX.git` or simply copy "edi2odx.py" locally
+`git clone https://github.com/HB9DTX/EDI2ODX.git` or simply copy "edi2odx.py" and "maiden.py" locally
 2. Install the following python packages if not already installed:
    - *python3-pandas*
    - *numpy*
    - *matplotlib*
    - *math*
    - *geotiler*
+   - *openpyxl* (if excel output is required)
 
 # Usage
 1. Copy one or more EDI file in the current directory (one file per contest and per activated band)

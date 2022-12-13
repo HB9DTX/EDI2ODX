@@ -198,6 +198,8 @@ def generate_xlsx_csv_files(contest):
     outfile = open(csv_filename, 'w')
     outfile.write(contest.call + ' (' + contest.locator + ') wkd ' + WAVELENGTHS[contest.bandEDI] + ':\n')
     outfile.write('DATE\tTIME\tCALL\tLOCATOR\tQRB/MOD\n')   # no time between QSB and MOD ==> manual header write
+    # outfile.write('DATE\t\tTIME\tCALL\tLOCATOR\tQRB\t\tMOD\n')   # align header with QSO list,
+    # but less optimal for DG7SFL for integration into DUBUS
     outfile.close()
     logging.debug(csv_filename)
     contest.qsoDx.to_csv(csv_filename, index=False, header=False, sep='\t', mode='a')
