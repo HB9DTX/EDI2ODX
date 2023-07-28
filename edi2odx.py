@@ -68,6 +68,7 @@ WAVELENGTHS['145 MHz'] = WAVELENGTHS['144 MHz']
 ODX['435 MHz'] = ODX['432 MHz']
 WAVELENGTHS['435 MHz'] = WAVELENGTHS['432 MHz']
 
+#logging.basicConfig(level=logging.DEBUG)
 logging.basicConfig(level=logging.INFO)
 
 
@@ -133,7 +134,8 @@ def read_edi_file(filename, contest):
         # OGY: Tucnak users should replace the following line with the commented \
         #     line below it so to ignore the last line IDENT in a Tucnak EDI file \
         #     (or manually delete the IDENT line before processing).
-        qsos_list = pd.read_csv(ediFile, delimiter=";", skiprows=1)
+        logging.debug(line)
+        qsos_list = pd.read_csv(ediFile, delimiter=";", header=None) #, skiprows=1)
         #qsos_list = pd.read_csv(ediFile, delimiter=";", skiprows=1, skipfooter=1, engine='python')
         qsos_list.columns = ['DATE', 'TIME', 'CALL', 'MODE', 'SENT_RST', 'SENT_NR',
                              'RECEIVED_RST', 'RECEIVED_NUMBER',
@@ -142,6 +144,8 @@ def read_edi_file(filename, contest):
         # Column names matching EDI file format specification
 
     contest.qsoList = qsos_list
+    logging.debug('QSO List (full log):')
+    logging.debug(qsos_list)
     contest.outputFilePrefix = current_contest.start + '_' + current_contest.call + '_'\
         + current_contest.locator + '__' + current_contest.bandFileName
     # contest start date, callsign and band are used to create "unique" filenames
