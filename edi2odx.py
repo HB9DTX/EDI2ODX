@@ -165,10 +165,14 @@ def select_odx_only(contest, distance_limit):
     qsos_dx['DATE'] = pd.to_datetime(qsos_dx['DATE'], format='%y%m%d')
     qsos_dx['DATE'] = qsos_dx['DATE'].dt.strftime('%Y-%m-%d')
     # DATE conversion to format expected by DUBUS
+    logging.debug("Time debug XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx")
+    logging.debug(qsos_dx['TIME'])
+    qsos_dx['TIME'] = pd.to_datetime(qsos_dx['TIME'], format='%H%M')   #Buggous with QSO right after midnight. Seems corrected with python 3.10...
+    #qsos_dx['TIME'] = pd.to_datetime(qsos_dx['TIME'], infer_datetime_format=True) # Workaround for Python 3.8
 
-    # qsos_dx['TIME'] = pd.to_datetime(qsos_dx['TIME'], format='%H%M')   #Buggous with QSO right after midnight
-    qsos_dx['TIME'] = pd.to_datetime(qsos_dx['TIME'], infer_datetime_format=True)
+    logging.debug(qsos_dx['TIME'])
     qsos_dx['TIME'] = qsos_dx['TIME'].dt.strftime('%H:%M')
+    logging.debug(qsos_dx['TIME'])
     # TIME conversion to format expected by DUBUS
 
     qsos_dx['QRB'] = qsos_dx['QRB'].astype(str) + ' km'
