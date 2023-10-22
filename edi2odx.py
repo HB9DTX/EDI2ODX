@@ -83,6 +83,7 @@ class Contest:
         self.outputFilePrefix = None    # common prefix of the output files
         self.qsoList = None             # contains the whole contest log with all columns
         self.qsoDx = None               # best DXs only, with limited columns for DUBUS report
+        self.minDistance = None         # minimum distance of interest for ODX
 
 
 def read_edi_file(filename, contest):
@@ -202,6 +203,7 @@ def select_odx_only(contest, distance_limit):
     logging.info('%s QSOs with distance over %s km:', nr_qso_dx, distance_limit)
     logging.debug(qsos_dx)
     contest.qsoDx = qsos_dx
+    contest.minDistance = distance_limit
     return contest
 
 
@@ -209,7 +211,7 @@ def generate_xlsx_csv_files(contest):
     # generate output files in text files for the best DX QSO's of the contest provided as argument
     csv_filename = contest.outputFilePrefix + '_DXs.txt'
     outfile = open(csv_filename, 'w')
-    outfile.write(contest.call + ' (' + contest.locator + ') wkd ' + WAVELENGTHS[contest.bandEDI] + ':\n')
+    outfile.write(contest.call + ' (' + contest.locator + ') wkd ' + WAVELENGTHS[contest.bandEDI] + ' with QRB > '+ str(contest.minDistance) + ' km:\n')
     outfile.write('DATE\tTIME\tCALL\tLOCATOR\tQRB/MOD\n')   # no time between QSB and MOD ==> manual header write
     # outfile.write('DATE\t\tTIME\tCALL\tLOCATOR\tQRB\t\tMOD\n')   # align header with QSO list,
     # but less optimal for DG7SFL for integration into DUBUS
